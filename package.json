@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
+    "build:static": "TELOS_STATIC=1 NEXT_PUBLIC_TELOS_SYNC=0 next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "typecheck": "tsc --noEmit",
     "check:messages": "node scripts/check-messages.mjs",

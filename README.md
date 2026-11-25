@@ -34,6 +34,16 @@ existing JSON store over with `npm run store:backfill`, which is safe to repeat.
 `.data/secret`. Set `NEXT_PUBLIC_TELOS_SYNC=0` at build time to ship without the
 sync panel (export/import stays).
 
+## Hosting on GitHub Pages
+
+`.github/workflows/pages.yml` builds the static export on every push to `master`
+and publishes it to `https://<user>.github.io/telos/`. `npm run build:static`
+sets `TELOS_STATIC=1`, which switches `next.config.mjs` to `output: 'export'`
+under the `/telos` base path, drops the API route handlers and sets
+`NEXT_PUBLIC_TELOS_SYNC=0`; the list then lives in the browser and moves between
+devices with the JSON export/import. Pages needs the repository to be public on
+a free plan.
+
 ## Structure
 
 - `app/layout.tsx`, `app/page.tsx` — the single page and its fonts

@@ -7,6 +7,7 @@ import { SyncPanel } from './SyncPanel';
 import { TaskRow } from './TaskRow';
 import { downloadBackup, parseBackup } from '@/lib/backup';
 import { daysFromToday, nextOccurrence, parseISODate, todayISODate } from '@/lib/dates';
+import { visibleTasks } from '@/lib/filters';
 import { loadTasks, saveTasks } from '@/lib/storage';
 import {
   markDescendantsDeleted,
@@ -78,7 +79,6 @@ export function TaskApp() {
     return () => document.removeEventListener('keydown', onKey);
   }, [pendingDelete]);
 
-  const collator = useMemo(() => new Intl.Collator(LOCALE), []);
   const numberFormat = useMemo(() => new Intl.NumberFormat(LOCALE), []);
   const dateFormat = useMemo(
     () =>
@@ -114,28 +114,7 @@ export function TaskApp() {
     return { dueToday, overdue, week, done, total: all.length };
   }, [all, today]);
 
-  const visible = useMemo(() => {
-    const byDue = (a: Task, b: Task) => a.due.localeCompare(b.due) || a.createdAt - b.createdAt;
-    if (filter === 'today') {
-      return all
-        .filter((task) => !task.done && daysFromToday(task.due, today) <= 0)
-        .sort(byDue);
-    }
-    if (filter === 'week') {
-      return all
-        .filter((task) => !task.done && daysFromToday(task.due, today) <= 7)
-        .sort(byDue);
-    }
-    if (filter === 'done') {
-      return all
-        .filter((task) => task.done)
-        .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
-    }
-    return [...all].sort(
-      (a, b) =>
-        Number(a.done) - Number(b.done) || byDue(a, b) || collator.compare(a.title, b.title),
-    );
-  }, [all, collator, filter, today]);
+  const visible = useMemo(() => visibleTasks(tasks ?? [], filter, today), [tasks, filter, today]);
 
   function addTask(title: string, due: string, repeat: Repeat) {
     if (tasks === null) return;

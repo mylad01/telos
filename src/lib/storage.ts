@@ -5,9 +5,14 @@ const STORAGE_KEY = 'telos.tasks.v1';
 type LoadResult = { status: 'ok'; tasks: Task[] } | { status: 'blocked'; tasks: Task[] };
 
 export function loadTasks(): LoadResult {
+  let raw: string | null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { status: 'ok', tasks: [] };
+    raw = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return { status: 'blocked', tasks: [] };
+  }
+  if (!raw) return { status: 'ok', tasks: [] };
+  try {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return { status: 'ok', tasks: [] };
     const tasks = parsed
@@ -15,7 +20,7 @@ export function loadTasks(): LoadResult {
       .filter((task): task is Task => task !== null);
     return { status: 'ok', tasks: pruneTombstones(tasks) };
   } catch {
-    return { status: 'blocked', tasks: [] };
+    return { status: 'ok', tasks: [] };
   }
 }
 

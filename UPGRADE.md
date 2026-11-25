@@ -4,6 +4,36 @@ Written 2026-11-25 against the code as it stands (Phases 1–3 shipped, no test 
 Companion to `PLAN.md`, which covers features; this file covers the stack and the
 runtime risks underneath them.
 
+## Status (2026-11-25)
+
+Phases 0–3 are done and Phase 4's CI is in place; lint and auth hardening stay
+open by design. What landed, and where it differs from the plan:
+
+- **Phase 0** — `vitest` (the watch-mode option) because the node:test route cannot
+  load extensionless TS imports without touching every import. Tests live beside
+  the code (`src/lib/*.test.ts`, `src/server/*.test.ts`); the sync contract in
+  `src/server/store.contract.ts` runs against both stores. `next-env.d.ts` was
+  already tracked. The smoke journey runs through the workspace browser tool at
+  390 px and 1280 px rather than as a committed Playwright spec, because installing
+  Playwright is not allowed in this workspace; add the spec when the repo has its
+  own CI runner with browsers.
+- **Phase 1** — `engines.node >=24 <25`, `.nvmrc` 24, TypeScript 7.0.2. `tsc --noEmit`
+  and `next build` are clean.
+- **Phase 2** — react/react-dom `^19.3.1`, `@types/react(-dom)` `^19.3.0`.
+- **Phase 3** — `TELOS_STORE=sqlite` uses `node:sqlite`; JSON stays the default.
+  No `sessions` table (sessions are stateless HMAC cookies) and no dual-write:
+  `npm run store:backfill` copies the JSON store in one transaction, and the seq is
+  raised to the highest value seen. Verified end-to-end: sign up and sync on JSON,
+  backfill, restart on SQLite, same account and task come back over HTTP.
+- **Phase 4** — `.github/workflows/ci.yml` runs install, `check:messages`,
+  `typecheck`, `test`, `build` on Node 24. Lint and auth hardening are still open
+  decisions; no public URL is served without them.
+
+Note that the plan's `node:test` preference is superseded: the plan chose it to
+avoid a dependency, but Node's type stripping needs explicit `.ts` import
+extensions, which this codebase does not use.
+
+
 ## Where the app stands
 
 | Piece | Installed | Latest | Verdict |
@@ -145,6 +175,9 @@ writer is removed.
 
 ## Open decisions
 
-- Test runner: `node:test` (zero dependency) or `vitest` (watch mode, better diffs).
-- SQLite (`node:sqlite`) or straight to Postgres in Phase 3.
-- Whether lint is in scope at all for a single-author app.
+- Test runner: **settled on vitest** — the node:test zero-dependency route needs
+  `.ts` import extensions this codebase does not use.
+- Store: **settled on SQLite behind the switch**; Postgres stays off the table.
+- Whether lint is in scope at all for a single-author app — still open; the CI
+  workflow does not run one.
+- Auth hardening (rate limit, password reset) before any public URL — still open.

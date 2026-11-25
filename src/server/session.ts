@@ -1,11 +1,12 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { cookies } from 'next/headers';
 import { DATA_DIR } from './store';
+import { createToken, readToken } from './token';
 
 const COOKIE = 'telos_session';
-const MAX_AGE_S = 60 * 60 * 24 * 30;
+export const MAX_AGE_S = 60 * 60 * 24 * 30;
 const SECRET_FILE = path.join(DATA_DIR, 'secret');
 
 let secretCache: string | null = null;
@@ -30,21 +31,10 @@ async function getSecret(): Promise<string> {
   return secretCache;
 }
 
-async function sign(payload: string): Promise<string> {
-  return createHmac('sha256', await getSecret()).update(payload).digest('hex');
-}
-
-function sameToken(a: string, b: string): boolean {
-  const left = Buffer.from(a, 'hex');
-  const right = Buffer.from(b, 'hex');
-  return left.length === right.length && timingSafeEqual(left, right);
-}
-
 export async function issueSession(email: string): Promise<void> {
-  const expires = Date.now() + MAX_AGE_S * 1000;
-  const payload = `${email}|${expires}`;
+  const token = createToken(email, Date.now() + MAX_AGE_S * 1000, await getSecret());
   const jar = await cookies();
-  jar.set(COOKIE, `${payload}|${await sign(payload)}`, {
+  jar.set(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
@@ -60,10 +50,5 @@ export async function clearSession(): Promise<void> {
 export async function currentUser(): Promise<string | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
-  const parts = token.split('|');
-  if (parts.length !== 3) return null;
-  const [email, expires, signature] = parts;
-  if (!email || !/^\d+$/.test(expires) || Number(expires) < Date.now()) return null;
-  const expected = await sign(`${email}|${expires}`);
-  return sameToken(expected, signature) ? email : null;
+  return readToken(token, await getSecret())?.email ?? null;
 }

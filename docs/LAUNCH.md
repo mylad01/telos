@@ -96,7 +96,8 @@ Then, in the browser:
 
 If step 1 says "check your inbox", email confirmation is on (Phase 0.3). If it
 says "couldn't reach sync", the URL or key is wrong. If rows never appear but
-status says synced, step 4 of Phase 1 was skipped — the policy is missing.
+status says synced, step 3 of Phase 1 did not run to completion — the policy is
+missing (step 4 would show the table without its green "RLS enabled" badge).
 
 The two variables are baked in at start, so restart `npm run dev` after changing
 them. Without them dev talks to this repo's own `/api/sync` instead, which is a

@@ -27,6 +27,8 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('title'),
     description: t('description'),
     applicationName: 'Telos',
+    // Relative, like the manifest's own paths: correct at / and under /telos/.
+    icons: { apple: { url: 'icons/apple-touch-icon.png', sizes: '180x180' } },
   };
 }
 

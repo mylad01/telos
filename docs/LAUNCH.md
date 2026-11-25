@@ -96,13 +96,11 @@ Then, in the browser:
 
 If step 1 says "check your inbox", email confirmation is on (Phase 0.3). If it
 says "couldn't reach sync", the URL or key is wrong. If rows never appear but
-status says synced, step 3.4 of Phase 1 was skipped — the policy is missing.
+status says synced, step 4 of Phase 1 was skipped — the policy is missing.
 
-Laptop-only smoke test without a browser profile dance:
-
-```bash
-npx supabase projects list   # confirms which account the CLI is logged into
-```
+The two variables are baked in at start, so restart `npm run dev` after changing
+them. Without them dev talks to this repo's own `/api/sync` instead, which is a
+good way to compare the two backends.
 
 ---
 

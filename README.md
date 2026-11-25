@@ -18,8 +18,9 @@ keeps the same list on every device.
 The same codebase runs with or without a server. Which one you get is decided at
 build time, from whether Supabase settings are present — see
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the diagrams and the full design,
-and [docs/adr/0001](docs/adr/0001-github-pages-with-supabase.md) for why it is
-built this way.
+[docs/adr/0001](docs/adr/0001-github-pages-with-supabase.md) for why it is built
+this way, and [docs/LAUNCH.md](docs/LAUNCH.md) for the step-by-step launch plan
+(Supabase project, proving sync, publishing, rollback).
 
 | | Self-hosted | Free on GitHub Pages |
 |---|---|---|

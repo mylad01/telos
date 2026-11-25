@@ -27,6 +27,10 @@ jobs:
       - run: npm run build:static
         env:
           TELOS_BASE_PATH: /${{ github.event.repository.name }}
+          # Optional: set these two repository variables to turn on sync.
+          # Without them the site is a local-only list (export/import still works).
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

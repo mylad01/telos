@@ -60,6 +60,7 @@ export function SyncPanel({
     if (code === 'exists') return t('errorExists');
     if (code === 'password') return t('errorPassword');
     if (code === 'email') return t('errorEmail');
+    if (code === 'confirm') return t('errorConfirm');
     if (code === 'network') return t('errorNetwork');
     return t('errorInvalid');
   };

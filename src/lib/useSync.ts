@@ -1,12 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { backend } from './backend-select';
 import { mergeTaskLists, pendingChanges, pruneTombstones, type Task } from './tasks';
 
 export type SyncStatus = 'local' | 'syncing' | 'synced' | 'offline' | 'error';
 export type SyncAccount = { email: string } | null;
 
-/** Feature flag: set NEXT_PUBLIC_TELOS_SYNC=0 at build time to hide sync. */
+/**
+ * Feature flag: set NEXT_PUBLIC_TELOS_SYNC=0 at build time to hide sync.
+ * `next.config.mjs` overrides it for static builds, where the flag follows the
+ * presence of the Supabase settings instead.
+ * `next.config.mjs` turns it off automatically for a static build with no
+ * Supabase settings, because there would be no server to talk to.
+ */
 export const SYNC_ENABLED = process.env.NEXT_PUBLIC_TELOS_SYNC !== '0';
 
 const POLL_MS = 4_000;
@@ -45,14 +52,9 @@ export function useSync(
     setStatus('syncing');
     try {
       const changes = pendingChanges(list, pushedRef.current);
-      const response = await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ since: sinceRef.current, changes }),
-        cache: 'no-store',
-      });
+      const data = await backend.sync(sinceRef.current, changes);
 
-      if (response.status === 401) {
+      if (!data) {
         setAccount(null);
         pushedRef.current = new Map();
         sinceRef.current = 0;
@@ -60,9 +62,7 @@ export function useSync(
         setPending(0);
         return;
       }
-      if (!response.ok) throw new Error(`sync ${response.status}`);
 
-      const data = (await response.json()) as { tasks: Task[]; now: number };
       sinceRef.current = Math.max(sinceRef.current, data.now);
       for (const task of changes) pushedRef.current.set(task.id, task.updatedAt);
 
@@ -85,10 +85,10 @@ export function useSync(
   useEffect(() => {
     if (!SYNC_ENABLED) return;
     let cancelled = false;
-    fetch('/api/auth', { cache: 'no-store' })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { email?: string | null } | null) => {
-        if (!cancelled && data?.email) setAccount({ email: data.email });
+    backend
+      .currentUser()
+      .then((user) => {
+        if (!cancelled && user) setAccount({ email: user.email });
       })
       .catch(() => undefined);
     return () => {
@@ -123,28 +123,21 @@ export function useSync(
 
   const authenticate = useCallback(
     async (action: 'login' | 'signup', email: string, password: string) => {
+      let result;
       try {
-        const response = await fetch('/api/auth', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ action, email, password }),
-        });
-        const data = (await response.json().catch(() => ({}))) as {
-          email?: string;
-          error?: string;
-        };
-        if (!response.ok) return data.error ?? 'invalid';
-
-        // First upload after signing in sends this device's whole list.
-        pushedRef.current = new Map();
-        sinceRef.current = 0;
-        setAccount({ email: data.email ?? email });
-        setPending(countPending(tasksRef.current));
-        setStatus('syncing');
-        return null;
+        result = await backend.authenticate(action, email, password);
       } catch {
         return 'network';
       }
+      if ('error' in result) return result.error;
+
+      // First upload after signing in sends this device's whole list.
+      pushedRef.current = new Map();
+      sinceRef.current = 0;
+      setAccount({ email: result.email });
+      setPending(countPending(tasksRef.current));
+      setStatus('syncing');
+      return null;
     },
     [countPending],
   );
@@ -160,11 +153,7 @@ export function useSync(
 
   const signOut = useCallback(async () => {
     try {
-      await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'logout' }),
-      });
+      await backend.signOut();
     } catch {
       // The local list is unaffected either way.
     }

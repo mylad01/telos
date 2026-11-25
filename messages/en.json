@@ -84,6 +84,7 @@
     "errorExists": "That account already exists — sign in instead.",
     "errorPassword": "Use at least 8 characters.",
     "errorEmail": "Enter a valid email address.",
+    "errorConfirm": "Account created — check your email to confirm, then sign in.",
     "errorNetwork": "Couldn't reach sync. Your changes are saved here."
   },
   "backup": {

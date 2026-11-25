@@ -1,0 +1,115 @@
+{
+  "meta": {
+    "title": "Telos — a quiet to-do list",
+    "description": "A fast, quiet to-do list with due dates, repeating tasks and a today view. Everything stays on your device."
+  },
+  "appName": "Telos",
+  "header": {
+    "language": "Language"
+  },
+  "composer": {
+    "label": "New task",
+    "placeholder": "What needs to happen?",
+    "dueLabel": "Due",
+    "add": "Add",
+    "hint": "Enter to add · Esc to clear",
+    "repeatLabel": "Repeats",
+    "repeat": {
+      "none": "Once",
+      "daily": "Daily",
+      "weekly": "Weekly"
+    }
+  },
+  "filters": {
+    "label": "Show",
+    "today": "Today",
+    "week": "This week",
+    "all": "All",
+    "done": "Done"
+  },
+  "list": {
+    "sortedBy": "By due date",
+    "weekRange": "Next 7 days",
+    "count": "{count, plural, =0 {No tasks} one {# task} other {# tasks}}"
+  },
+  "summary": {
+    "dueToday": "{count, plural, =0 {Nothing due today} one {# task due today} other {# tasks due today}}",
+    "thisWeek": "{count, plural, =0 {Nothing left this week} one {# task this week} other {# tasks this week}}",
+    "doneCount": "{count, plural, =0 {Nothing done yet} one {# task done} other {# tasks done}}",
+    "overdue": "{count, plural, one {# overdue} other {# overdue}}",
+    "progress": "{done} of {total} done"
+  },
+  "task": {
+    "doneToggle": "Mark “{title}” as done",
+    "undoneToggle": "Mark “{title}” as not done",
+    "delete": "Delete “{title}”",
+    "dueToday": "Today",
+    "dueTomorrow": "Tomorrow",
+    "dueYesterday": "Yesterday",
+    "overdueBy": "{count, plural, one {# day overdue} other {# days overdue}}",
+    "repeatDaily": "Daily",
+    "repeatWeekly": "Weekly",
+    "repeats": "Repeats {repeat}",
+    "reschedule": "Reschedule “{title}”",
+    "rescheduleToday": "Move “{title}” to today",
+    "rescheduleTomorrow": "Move “{title}” to tomorrow",
+    "rescheduleNextWeek": "Move “{title}” to next week",
+    "chipToday": "Today",
+    "chipTomorrow": "Tomorrow",
+    "chipNextWeek": "Next week"
+  },
+  "toast": {
+    "deleted": "“{title}” deleted",
+    "undo": "Undo",
+    "dismiss": "Dismiss"
+  },
+  "sync": {
+    "title": "Sync",
+    "blurb": "Optional. Sign in to keep the same list on every device. Everything still works offline.",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "switchToSignUp": "New here? Create an account",
+    "switchToSignIn": "Already have an account? Sign in",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as {email}",
+    "statusLocal": "Saved on this device",
+    "statusSyncing": "Syncing…",
+    "statusSynced": "Synced {time}",
+    "statusPending": "{count, plural, one {# change waiting} other {# changes waiting}}",
+    "statusOffline": "Offline — syncs when you reconnect",
+    "statusError": "Sync failed — retrying",
+    "errorInvalid": "Check the email and password.",
+    "errorExists": "That account already exists — sign in instead.",
+    "errorPassword": "Use at least 8 characters.",
+    "errorEmail": "Enter a valid email address.",
+    "errorNetwork": "Couldn't reach sync. Your changes are saved here."
+  },
+  "backup": {
+    "title": "Backup",
+    "blurb": "Move this list as a JSON file.",
+    "export": "Export JSON",
+    "import": "Import JSON",
+    "imported": "{count, plural, =0 {Nothing new in that file} one {# task imported} other {# tasks imported}}",
+    "invalid": "That file isn't a Telos backup."
+  },
+  "empty": {
+    "todayTitle": "Today is clear.",
+    "todayBody": "Overdue tasks would show up here too.",
+    "weekTitle": "The week is open.",
+    "weekBody": "Nothing is due in the next seven days.",
+    "allTitle": "No tasks yet.",
+    "allBody": "Add one above — it saves on this device.",
+    "doneTitle": "Nothing finished yet.",
+    "doneBody": "Tick a task and it lands here."
+  },
+  "storage": {
+    "errorTitle": "Tasks can't be saved",
+    "errorBody": "Your browser blocked local storage. Private windows often do. You can keep working, but nothing will survive a reload.",
+    "loading": "Loading your tasks"
+  },
+  "footer": {
+    "saved": "Saved in this browser"
+  }
+}

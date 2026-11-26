@@ -1830,6 +1830,7 @@ input {
 /* Weekly activity */
 .stats {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-block-start: 14px;
@@ -1867,4 +1868,318 @@ input {
   color: var(--text-3);
   font-size: var(--step--1);
 }
+
+.habits {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-3);
+  font-size: var(--step--1);
+}
+
+.habits li {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.habits-count {
+  color: var(--accent);
+}
+
+/* Panels (focus, templates, share) */
+.panel-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 10px;
+}
+
+.panel-tab {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-3);
+  font: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+}
+
+.panel-tab[aria-pressed='true'] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.panel {
+  display: grid;
+  gap: 10px;
+  margin-block-start: 8px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.panel-select,
+.panel input[type='text'] {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--step--1);
+}
+
+.panel-note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--step--1);
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-start: 10px;
+}
+
+.bulk-input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 6px 9px;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--step--1);
+}
+
+.bulk-submit,
+.focus-button,
+.templates-button,
+.share-button {
+  padding: 5px 12px;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+}
+
+.bulk-submit:disabled,
+.focus-button:disabled,
+.templates-button:disabled,
+.share-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.bulk-result {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--step--1);
+}
+
+/* Focus timer */
+.focus-timer {
+  display: grid;
+  gap: 8px;
+}
+
+.focus-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.focus-task {
+  color: var(--text);
+  font-size: var(--step--1);
+  overflow-wrap: anywhere;
+}
+
+.focus-phase {
+  color: var(--text-3);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.focus-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.focus-track {
+  height: 5px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.focus-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.9s linear;
+}
+
+.focus-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.focus-rounds {
+  color: var(--text-3);
+  font-size: var(--step--1);
+}
+
+.focus-stop {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-3);
+}
+
+/* Templates */
+.templates-panel,
+.share-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.templates-head,
+.share-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.templates-title,
+.share-title {
+  margin: 0;
+  font-size: var(--step--1);
+  font-weight: 600;
+}
+
+.templates-blurb,
+.share-blurb,
+.share-subtitle {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.templates-status,
+.share-status {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.templates-form,
+.share-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.templates-input,
+.share-input,
+.share-select {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 6px 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--step--1);
+}
+
+.templates-list,
+.share-invites {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.templates-item,
+.share-invite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block-end: 6px;
+  border-block-end: 1px solid var(--border);
+}
+
+.templates-item:last-child,
+.share-invite:last-child {
+  padding-block-end: 0;
+  border-block-end: 0;
+}
+
+.templates-name,
+.share-owner {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--step--1);
+}
+
+.templates-meta,
+.share-role {
+  display: block;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.templates-actions,
+.share-button-row {
+  display: flex;
+  gap: 4px;
+}
+
+.templates-button-quiet,
+.share-button-quiet,
+.templates-actions button,
+.share-invite button {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-3);
+}
+
+.templates-empty,
+.share-empty {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.share-code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
 

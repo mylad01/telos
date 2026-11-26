@@ -187,7 +187,64 @@
   "stats": {
     "label": "Completed in the last seven days",
     "week": "This week {done} done · last week {last}",
-    "streak": "{count, plural, one {# day streak} other {# day streak}}"
+    "streak": "{count, plural, one {# day streak} other {# day streak}}",
+    "habit": "{count, plural, one {# in a row} other {# in a row}}"
+  },
+  "focus": {
+    "label": "Focus timer",
+    "pickTask": "Task to focus on",
+    "noTask": "No task chosen",
+    "time": "{time}",
+    "phase": {
+      "focus": "Focus",
+      "break": "Break"
+    },
+    "rounds": "{count, plural, =0 {No rounds yet} one {# round} other {# rounds}}",
+    "start": "Start",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop"
+  },
+  "bulk": {
+    "label": "Bulk edit command",
+    "placeholder": "Try “move work to next week”",
+    "submit": "Run",
+    "busy": "Running…",
+    "applied": "{count, plural, =0 {Nothing matched} one {# task updated} other {# tasks updated}}",
+    "unknown": "I didn’t understand that — try “move work to next week”."
+  },
+  "templates": {
+    "title": "Templates",
+    "blurb": "Save the shape of a task and use it again.",
+    "saveLabel": "Save this list as a template",
+    "savePlaceholder": "Template name",
+    "save": "Save",
+    "meta": "{list} · {count, plural, one {# sub-task} other {# sub-tasks}}",
+    "apply": "Use",
+    "delete": "Delete",
+    "empty": "No templates yet.",
+    "statusCount": "{count, plural, =0 {No templates} one {# template} other {# templates}}",
+    "busy": "Working…"
+  },
+  "share": {
+    "title": "Share “{list}”",
+    "blurb": "Anyone with the code can join this list, once you are signed in for sync.",
+    "roleLabel": "They can",
+    "roleEditor": "Edit",
+    "roleViewer": "View",
+    "invite": "Create invite code",
+    "invited": "Invites",
+    "empty": "No invites yet.",
+    "unknownOwner": "Unknown",
+    "code": "Code {code}",
+    "revoke": "Revoke",
+    "joinLabel": "Join with a code",
+    "joinPlaceholder": "8-character code",
+    "join": "Join",
+    "statusCount": "{count, plural, =0 {No invites} one {# invite} other {# invites}}",
+    "busy": "Working…",
+    "unavailable": "Sign in for sync first — sharing needs an account.",
+    "error": "That did not work. Check the code and try again."
   },
   "footer": {
     "saved": "Saved in this browser"

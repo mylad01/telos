@@ -2,18 +2,39 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { BulkBar } from './BulkBar';
 import { Composer } from './Composer';
+import { FocusTimer } from './FocusTimer';
 import { MonthView } from './MonthView';
+import { SharePanel } from './SharePanel';
 import { SyncPanel } from './SyncPanel';
 import { TaskRow, type TaskPatch } from './TaskRow';
+import { TemplatesMenu } from './TemplatesMenu';
 import { downloadBackup, parseBackup } from '@/lib/backup';
+import { applyBulk, parseBulk } from '@/lib/bulk';
 import { shiftMonth, tasksByDay } from '@/lib/calendar';
 import { addDays, daysFromToday, nextOccurrence, parseISODate, todayISODate } from '@/lib/dates';
 import { visibleTasks } from '@/lib/filters';
+import {
+  FOCUS_MS,
+  loadFocus,
+  pauseFocus as holdFocus,
+  resumeFocus as continueFocus,
+  saveFocus,
+  startFocus as beginFocus,
+  stopFocus,
+  tick as tickFocus,
+  type FocusState,
+} from '@/lib/focus';
+import { habitStats } from '@/lib/habits';
 import { dueReminders, markNotified, type NotifiedMap } from '@/lib/reminders';
 import { searchTasks } from '@/lib/search';
+import { createInvite, joinShare, listInvites, revokeInvite, type ShareInvite, type ShareRole } from '@/lib/share';
 import { donePerDay, streak as streakOf, weekRecap } from '@/lib/stats';
 import { loadTasks, saveTasks } from '@/lib/storage';
+import { readSession } from '@/lib/supabase/client';
+import { applyTemplate, loadTemplates, saveTemplate, saveTemplates, type Template } from '@/lib/templates';
+import { supabaseConfig } from '@/lib/sync-backend';
 import {
   listsOf,
   markDescendantsDeleted,
@@ -50,6 +71,16 @@ export function TaskApp() {
     return { year: date.getFullYear(), month: date.getMonth() };
   });
   const [today, setToday] = useState<string>(todayISODate);
+  const [panel, setPanel] = useState<'none' | 'focus' | 'templates' | 'share'>('none');
+  const [focus, setFocus] = useState<FocusState>(stopFocus);
+  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
+  const [bulkInput, setBulkInput] = useState('');
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [invites, setInvites] = useState<ShareInvite[]>([]);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [shareSession, setShareSession] = useState<ReturnType<typeof readSession>>(null);
   const [storageBlocked, setStorageBlocked] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [toastPaused, setToastPaused] = useState(false);
@@ -66,6 +97,24 @@ export function TaskApp() {
     setTasks(result.tasks);
     if (result.status === 'blocked') setStorageBlocked(true);
   }, []);
+
+  useEffect(() => {
+    setFocus(loadFocus());
+    setTemplates(loadTemplates());
+    if (supabaseConfig()) setShareSession(readSession());
+  }, []);
+
+  useEffect(() => {
+    if (!focus.running) return;
+    const timer = window.setInterval(() => {
+      setFocus((state) => {
+        const next = tickFocus(state, Date.now());
+        saveFocus(next);
+        return next;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [focus.running]);
 
   useEffect(() => {
     const sync = () => setToday(todayISODate());
@@ -219,6 +268,121 @@ export function TaskApp() {
   const streakDays = useMemo(() => streakOf(all, today), [all, today]);
   const hasHistory = useMemo(() => all.some((task) => task.completedAt !== null), [all]);
   const weekPeak = useMemo(() => Math.max(1, ...week.map((day) => day.count)), [week]);
+
+  const habits = useMemo(() => habitStats(all, today), [all, today]);
+  const openTasks = useMemo(() => all.filter((task) => !task.done).slice(0, 30), [all]);
+  const focusTask = useMemo(
+    () => all.find((task) => task.id === (focus.taskId ?? focusTaskId ?? openTasks[0]?.id)) ?? null,
+    [all, focus.taskId, focusTaskId, openTasks],
+  );
+  const shareList = listScope ?? lists[0] ?? 'Inbox';
+
+  async function refreshInvites() {
+    const config = supabaseConfig();
+    const session = readSession();
+    if (!config || !session) return;
+    setShareSession(session);
+    setInvites(await listInvites({ url: config.url, key: config.key }, session, shareList));
+  }
+
+  function togglePanel(next: 'focus' | 'templates' | 'share') {
+    const open = panel === next ? 'none' : next;
+    setPanel(open);
+    if (open === 'share') void refreshInvites();
+  }
+
+  function focusOn(id: string) {
+    const next = beginFocus(focus, id, Date.now());
+    setFocus(next);
+    saveFocus(next);
+    setFocusTaskId(id);
+  }
+
+  function focusHold() {
+    const next = holdFocus(focus, Date.now());
+    setFocus(next);
+    saveFocus(next);
+  }
+
+  function focusContinue() {
+    const next = continueFocus(focus, Date.now());
+    setFocus(next);
+    saveFocus(next);
+  }
+
+  function focusStop() {
+    const next = stopFocus();
+    setFocus(next);
+    saveFocus(next);
+  }
+
+  function runBulk() {
+    const command = parseBulk(bulkInput, today);
+    if (!command) {
+      setBulkResult(t('bulk.unknown'));
+      return;
+    }
+    const result = applyBulk(tasks ?? [], command, today, Date.now());
+    setTasks(result.tasks);
+    setBulkResult(t('bulk.applied', { count: result.changed }));
+    setBulkInput('');
+  }
+
+  function saveCurrentTemplate(name: string) {
+    const source = visible[0] ?? all[0];
+    if (!source) return;
+    const next = [...templates, saveTemplate(name, source)];
+    setTemplates(next);
+    saveTemplates(next);
+  }
+
+  function useTemplate(id: string) {
+    const template = templates.find((item) => item.id === id);
+    if (!template || tasks === null) return;
+    setTasks([...tasks, applyTemplate(template, today, newId(), Date.now())]);
+  }
+
+  function removeTemplate(id: string) {
+    const next = templates.filter((item) => item.id !== id);
+    setTemplates(next);
+    saveTemplates(next);
+  }
+
+  async function inviteTo(role: ShareRole) {
+    const config = supabaseConfig();
+    const session = readSession();
+    if (!config || !session) return;
+    setShareBusy(true);
+    setShareError(null);
+    const created = await createInvite({ url: config.url, key: config.key }, session, shareList, role);
+    if (!created) setShareError(t('share.error'));
+    await refreshInvites();
+    setShareBusy(false);
+  }
+
+  async function revokeShare(code: string) {
+    const config = supabaseConfig();
+    const session = readSession();
+    if (!config || !session) return;
+    setShareBusy(true);
+    setShareError(null);
+    const ok = await revokeInvite({ url: config.url, key: config.key }, session, code);
+    if (!ok) setShareError(t('share.error'));
+    await refreshInvites();
+    setShareBusy(false);
+  }
+
+  async function joinWithCode(code: string) {
+    const config = supabaseConfig();
+    const session = readSession();
+    if (!config || !session) return;
+    setShareBusy(true);
+    setShareError(null);
+    const list = await joinShare({ url: config.url, key: config.key }, session, code);
+    if (list) setListScope(list);
+    else setShareError(t('share.error'));
+    setShareBusy(false);
+  }
 
   function addTask(title: string, due: string, repeat: Repeat, list: string) {
     if (tasks === null) return;
@@ -596,6 +760,101 @@ export function TaskApp() {
         />
       )}
 
+      <BulkBar value={bulkInput} onChange={setBulkInput} onSubmit={runBulk} result={bulkResult} />
+
+      <div className="panel-tabs">
+        <button
+          type="button"
+          className="panel-tab"
+          aria-pressed={panel === 'focus'}
+          onClick={() => togglePanel('focus')}
+        >
+          {t('focus.label')}
+        </button>
+        <button
+          type="button"
+          className="panel-tab"
+          aria-pressed={panel === 'templates'}
+          onClick={() => togglePanel('templates')}
+        >
+          {t('templates.title')}
+        </button>
+        <button
+          type="button"
+          className="panel-tab"
+          aria-pressed={panel === 'share'}
+          onClick={() => togglePanel('share')}
+        >
+          {t('share.title', { list: shareList })}
+        </button>
+      </div>
+
+      {panel === 'focus' && (
+        <div className="panel">
+          <label className="sr-only" htmlFor="focus-task">
+            {t('focus.pickTask')}
+          </label>
+          <select
+            id="focus-task"
+            className="panel-select"
+            value={focusTask?.id ?? ''}
+            onChange={(event) => focusOn(event.target.value)}
+          >
+            {openTasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.title}
+              </option>
+            ))}
+          </select>
+          <FocusTimer
+            taskTitle={focusTask?.title ?? null}
+            remainingMs={focus.remainingMs}
+            phase={focus.phase}
+            running={focus.running}
+            rounds={focus.rounds}
+            onStart={() => {
+              if (focusTask) focusOn(focusTask.id);
+            }}
+            onPause={focusHold}
+            onResume={focusContinue}
+            onStop={focusStop}
+          />
+        </div>
+      )}
+
+      {panel === 'templates' && (
+        <div className="panel">
+          <TemplatesMenu
+            templates={templates}
+            onApply={useTemplate}
+            onSaveCurrent={saveCurrentTemplate}
+            onDelete={removeTemplate}
+          />
+        </div>
+      )}
+
+      {panel === 'share' && (
+        <div className="panel">
+          {shareSession ? (
+            <SharePanel
+              list={shareList}
+              invites={invites}
+              busy={shareBusy}
+              onInvite={inviteTo}
+              onRevoke={revokeShare}
+              onJoin={joinWithCode}
+            />
+          ) : (
+            <p className="panel-note">{t('share.unavailable')}</p>
+          )}
+          {shareError && (
+            <p className="panel-note" role="status">
+              {shareError}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="list-head">
         <span className="list-head-left">
           {dayScope ? (
@@ -736,6 +995,16 @@ export function TaskApp() {
                 </>
               )}
             </p>
+            {habits.length > 0 && (
+              <ul className="habits">
+                {habits.slice(0, 3).map((habit) => (
+                  <li key={habit.seriesId}>
+                    <span className="habits-name">{habit.title}</span>
+                    <span className="habits-count">{t('stats.habit', { count: habit.streak })}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </footer>

@@ -10,6 +10,7 @@ import { SharePanel } from './SharePanel';
 import { SyncPanel } from './SyncPanel';
 import { TaskRow, type TaskPatch } from './TaskRow';
 import { TemplatesMenu } from './TemplatesMenu';
+import { ThemeStudio } from './ThemeStudio';
 import { downloadBackup, parseBackup } from '@/lib/backup';
 import { applyBulk, parseBulk } from '@/lib/bulk';
 import { shiftMonth, tasksByDay } from '@/lib/calendar';
@@ -43,7 +44,6 @@ import {
   type Repeat,
   type Task,
 } from '@/lib/tasks';
-import { nextTheme, readStoredTheme, resolveTheme, storeTheme, type Theme } from '@/lib/theme';
 import { useSync } from '@/lib/useSync';
 
 const FILTERS: Filter[] = ['today', 'week', 'all', 'done'];
@@ -71,7 +71,7 @@ export function TaskApp() {
     return { year: date.getFullYear(), month: date.getMonth() };
   });
   const [today, setToday] = useState<string>(todayISODate);
-  const [panel, setPanel] = useState<'none' | 'focus' | 'templates' | 'share'>('none');
+  const [panel, setPanel] = useState<'none' | 'focus' | 'templates' | 'share' | 'theme'>('none');
   const [focus, setFocus] = useState<FocusState>(stopFocus);
   const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
   const [bulkInput, setBulkInput] = useState('');
@@ -85,7 +85,6 @@ export function TaskApp() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [toastPaused, setToastPaused] = useState(false);
   const [query, setQuery] = useState('');
-  const [theme, setTheme] = useState<Theme>('system');
   const [backupMessage, setBackupMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(
     null,
   );
@@ -131,20 +130,6 @@ export function TaskApp() {
     if (tasks === null) return;
     if (!saveTasks(tasks)) setStorageBlocked(true);
   }, [tasks]);
-
-  useEffect(() => {
-    setTheme(readStoredTheme());
-  }, []);
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => {
-      document.documentElement.dataset.theme = resolveTheme(theme, media.matches);
-    };
-    apply();
-    media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
-  }, [theme]);
 
   useEffect(() => {
     if (tasks === null || typeof window === 'undefined' || !('Notification' in window)) return;
@@ -285,7 +270,7 @@ export function TaskApp() {
     setInvites(await listInvites({ url: config.url, key: config.key }, session, shareList));
   }
 
-  function togglePanel(next: 'focus' | 'templates' | 'share') {
+  function togglePanel(next: 'focus' | 'templates' | 'share' | 'theme') {
     const open = panel === next ? 'none' : next;
     setPanel(open);
     if (open === 'share') void refreshInvites();
@@ -544,12 +529,6 @@ export function TaskApp() {
     });
   }
 
-  function cycleTheme() {
-    const next = nextTheme(theme);
-    storeTheme(next);
-    setTheme(next);
-  }
-
   function exportTasks() {
     downloadBackup(tasks ?? []);
   }
@@ -598,8 +577,6 @@ export function TaskApp() {
         { key: 'evening', label: t('sections.evening'), tasks: visible.filter((task) => task.evening) },
       ].filter((group) => group.tasks.length > 0)
     : [{ key: 'all', label: '', tasks: visible }];
-  const themeLabel =
-    theme === 'system' ? t('theme.system') : theme === 'light' ? t('theme.light') : t('theme.dark');
 
   return (
     <main className={`shell${pending ? ' has-toast' : ''}`} id="main">
@@ -615,26 +592,23 @@ export function TaskApp() {
         <button
           type="button"
           className="theme-toggle"
-          aria-label={t('theme.change', { mode: themeLabel })}
-          title={t('theme.change', { mode: themeLabel })}
-          onClick={cycleTheme}
+          aria-label={t('theme.change')}
+          title={t('theme.title')}
+          aria-pressed={panel === 'theme'}
+          onClick={() => togglePanel('theme')}
         >
-          {theme === 'dark' ? (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            </svg>
-          ) : theme === 'light' ? (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="7.4" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M12 4.6a7.4 7.4 0 000 14.8z" fill="currentColor" opacity="0.5" />
-            </svg>
-          )}
-          <span className="sr-only">{themeLabel}</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 3.2a8.8 8.8 0 100 17.6c1.4 0 2-.8 2-1.7 0-.9-.6-1.4-.6-2.2 0-1 .8-1.7 1.9-1.7h1.6c2 0 3.5-1.5 3.5-3.6 0-4.6-3.8-8.4-8.4-8.4z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <circle cx="8.4" cy="9" r="1.15" fill="currentColor" />
+            <circle cx="12.6" cy="7.4" r="1.15" fill="currentColor" />
+            <circle cx="7.6" cy="13.2" r="1.15" fill="currentColor" />
+          </svg>
+          <span className="sr-only">{t('theme.title')}</span>
         </button>
       </header>
 
@@ -787,6 +761,14 @@ export function TaskApp() {
         >
           {t('share.title', { list: shareList })}
         </button>
+        <button
+          type="button"
+          className="panel-tab"
+          aria-pressed={panel === 'theme'}
+          onClick={() => togglePanel('theme')}
+        >
+          {t('theme.title')}
+        </button>
       </div>
 
       {panel === 'focus' && (
@@ -854,6 +836,8 @@ export function TaskApp() {
           )}
         </div>
       )}
+
+      {panel === 'theme' && <ThemeStudio />}
 
       <div className="list-head">
         <span className="list-head-left">

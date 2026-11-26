@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { Fraunces, Inter } from 'next/font/google';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { PRESETS } from '@/lib/theme/presets';
+import { presetsCss } from '@/lib/theme/tokens';
 import './globals.css';
 
 const display = Fraunces({
@@ -24,13 +27,12 @@ export const viewport: Viewport = {
   colorScheme: 'light dark',
 };
 
-// Applies the stored theme before first paint, so a dark-mode user never sees
-// a flash of the light palette while React hydrates.
-const THEME_SCRIPT =
-  "try{var s=localStorage.getItem('telos.theme.v1');" +
-  "var d=window.matchMedia('(prefers-color-scheme: dark)').matches;" +
-  "document.documentElement.dataset.theme=" +
-  "(s==='dark'||(s!=='light'&&d))?'dark':'light'}catch(e){}";
+// Paints the stored preset before first paint, so no one sees a flash of the
+// default palette while React hydrates. The token blocks themselves are the
+// style element below, generated from the same presets the studio lists.
+const BOOT_SCRIPT =
+  "try{var d=document.documentElement,p=localStorage.getItem('telos.theme.preset.v1');" +
+  "if(p&&/^[a-z0-9-]{1,40}$/.test(p))d.dataset.preset=p;}catch(e){}";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta');
@@ -47,14 +49,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
+      data-preset="paper"
       className={`${display.variable} ${text.variable}`}
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
+        <style
+          id="telos-presets"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: presetsCss(PRESETS) }}
+        />
       </head>
       <body suppressHydrationWarning>
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

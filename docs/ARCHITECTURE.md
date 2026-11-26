@@ -178,4 +178,26 @@ sign up in one browser profile and sign in in another to see the same list.
 | Which backend a build uses | `src/lib/backend-select.ts`, `next.config.mjs` |
 | Self-hosted API | `app/api/auth`, `app/api/sync`, `src/server/` |
 | Sync engine (poll, queue, merge) | `src/lib/useSync.ts`, `src/lib/tasks.ts` |
+| Theme tokens and CSS variables | `src/lib/theme/tokens.ts` |
+| Presets (colours, fonts, glass) | `src/lib/theme/presets.ts` (+ `presets.test.ts`) |
+| Theme picker UI, account copy of the choice | `src/components/ThemeStudio.tsx`, `src/lib/prefs*.ts`, `app/api/prefs` |
 | Copy | `messages/en.json` (run `npm run check:messages`) |
+
+## Theming
+
+Every surface, radius, shadow, font and the frosted-glass blur is a CSS
+variable. `app/layout.tsx` turns the presets into `[data-preset="…"]` blocks in
+one `<style>` tag and a tiny boot script sets the stored slug before first
+paint, so there is no flash and no token data in the JS bundle.
+
+Two rules keep this honest as the app grows:
+
+1. new CSS uses `var(--…)` tokens — a literal `#hex`, `12px` radius or font
+   stack is a bug, because that component will ignore every preset;
+2. a new preset is one entry in `presets.ts`; nothing else changes. The tests
+   check every preset's body text against 4.5:1 contrast and that a glass
+   preset (translucent surface) always carries a non-zero `glassBlur`.
+
+The choice is stored per account: `/api/prefs` on the Node backend (a JSON file
+next to the task store) or `public.telos_prefs` under Supabase RLS. Only the
+preset slug is stored; tokens never leave the bundle.

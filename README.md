@@ -118,6 +118,23 @@ npm run check:messages   # catalog ICU syntax and arguments
 - `src/i18n/request.ts` — next-intl request config (single locale)
 - `messages/en.json` — the only place user-visible copy lives
 
+## Theming
+
+Colours, radii, fonts, shadows and the glass effect are one token set
+(`src/lib/theme/tokens.ts`); presets are plain data (`src/lib/theme/presets.ts`,
+13 of them, including iOS and Liquid Glass). `app/layout.tsx` serialises every
+preset into a single `<style>` block, so first paint is already themed and no
+token data ships as JS.
+
+The chosen slug lives in `localStorage` (`telos.theme.preset.v1`) and on the
+account: `/api/prefs` on a local server, or the `telos_prefs` table when sync is
+on (`supabase/migrations/20261128120000_telos_prefs.sql`).
+
+The rule for new UI: use `var(--…)` tokens only, never a literal colour, radius
+or font size, so every preset — and every future one — restyles it for free.
+`src/lib/theme/presets.test.ts` fails if a preset's body text drops below 4.5:1
+contrast, or if a glass preset forgets its blur.
+
 ## Picking this up later
 
 Everything an assistant or a new contributor needs is in three places:

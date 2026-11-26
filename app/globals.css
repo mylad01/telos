@@ -23,6 +23,17 @@
   --shadow-1: 0 1px 2px rgba(70, 52, 28, 0.06);
   --shadow-2: 0 18px 40px -26px rgba(70, 52, 28, 0.4);
 
+  /* Interaction and glass tokens: every preset overrides these. */
+  --hover: rgba(70, 52, 28, 0.04);
+  --danger-soft: rgba(168, 67, 26, 0.1);
+  --alert-bg: rgba(168, 67, 26, 0.07);
+  --alert-border: rgba(168, 67, 26, 0.3);
+  --glass-blur: 0px;
+  --glass-tint: transparent;
+  --backdrop:
+    radial-gradient(760px 420px at 50% -200px, rgba(168, 67, 26, 0.07), transparent 72%),
+    radial-gradient(520px 300px at 100% 0%, rgba(207, 173, 120, 0.16), transparent 70%);
+
   --step-1: 0.6875rem;
   --step-2: 0.75rem;
   --step-3: 0.84375rem;
@@ -56,9 +67,7 @@ body {
 
 body {
   background-color: var(--bg);
-  background-image:
-    radial-gradient(760px 420px at 50% -200px, rgba(168, 67, 26, 0.07), transparent 72%),
-    radial-gradient(520px 300px at 100% 0%, rgba(207, 173, 120, 0.16), transparent 70%);
+  background-image: var(--backdrop);
   background-repeat: no-repeat;
   color: var(--text);
   font-family: var(--font-sans);
@@ -1416,54 +1425,8 @@ input {
   color: var(--accent);
 }
 
-/* Dark theme ---------------------------------------------------------- */
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-
-  --bg: #17150f;
-  --surface: #201c15;
-  --surface-2: #272218;
-  --surface-3: #2f291d;
-  --border: #34301f;
-  --border-strong: #4d4334;
-
-  --text: #f1e9da;
-  --text-2: #c0b5a3;
-  --text-3: #a2977f;
-
-  --accent: #e57f4e;
-  --accent-ink: #191510;
-  --accent-soft: rgba(229, 127, 78, 0.13);
-  --accent-line: rgba(229, 127, 78, 0.48);
-  --overdue: #e99a66;
-
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45);
-  --shadow-2: 0 18px 40px -26px rgba(0, 0, 0, 0.9);
-}
-
-:root[data-theme="dark"] body {
-  background-image:
-    radial-gradient(760px 420px at 50% -200px, rgba(229, 127, 78, 0.08), transparent 72%),
-    radial-gradient(520px 300px at 100% 0%, rgba(150, 120, 80, 0.14), transparent 70%);
-}
-
-:root[data-theme="dark"] .task:hover {
-  background-color: rgba(255, 240, 220, 0.03);
-}
-
-:root[data-theme="dark"] .task-delete:hover {
-  background: rgba(233, 154, 102, 0.12);
-}
-
-:root[data-theme="dark"] .task-delete:active {
-  background: rgba(233, 154, 102, 0.2);
-}
-
-:root[data-theme="dark"] .alert {
-  background: rgba(233, 154, 102, 0.09);
-  border-color: rgba(233, 154, 102, 0.3);
-}
+/* Themes own light and dark: every preset sets its own tokens, so no
+   [data-theme] override block lives here. */
 
 /* Phase B: lists, tags, priority, sub-tasks --------------------------- */
 
@@ -2181,5 +2144,150 @@ input {
   letter-spacing: 0.08em;
   color: var(--accent);
 }
+
+/* Theme engine ------------------------------------------------------- */
+
+/* Panels read their surfaces from tokens; with a glass preset `--glass-blur`
+   is non-zero and the same rules turn them into frosted sheets. */
+.topbar,
+.panel,
+.month,
+.theme-studio,
+.composer {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.topbar {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  box-shadow: inset 0 -1px 0 var(--glass-tint);
+}
+
+.task:hover {
+  background-color: var(--hover);
+}
+
+.task-delete:hover {
+  background: var(--danger-soft);
+}
+
+.alert {
+  background: var(--alert-bg);
+  border-color: var(--alert-border);
+}
+
+.theme-studio {
+  display: grid;
+  gap: 14px;
+  margin-block-start: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+}
+
+.theme-studio-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.theme-studio-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--step-0);
+  font-weight: 600;
+}
+
+.theme-studio-blurb,
+.theme-studio-foot {
+  margin: 2px 0 0;
+  color: var(--text-3);
+  font-size: var(--step--1);
+}
+
+.theme-studio-sync {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11px;
+  text-align: end;
+}
+
+.theme-studio-sync[data-sync='synced'] {
+  color: var(--accent);
+}
+
+.theme-studio-sync[data-sync='error'] {
+  color: var(--overdue);
+}
+
+.theme-group {
+  display: grid;
+  gap: 6px;
+}
+
+.theme-group-label {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.theme-card {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.theme-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.theme-swatch {
+  display: flex;
+  gap: 0;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.theme-swatch span {
+  flex: 1;
+}
+
+.theme-card-name {
+  font-size: var(--step--1);
+  font-weight: 600;
+}
+
+.theme-card-note {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
 
 

@@ -7,12 +7,6 @@
   "header": {
     "language": "Language"
   },
-  "theme": {
-    "system": "Auto",
-    "light": "Light",
-    "dark": "Dark",
-    "change": "Theme: {mode}. Switch"
-  },
   "composer": {
     "label": "New task",
     "placeholder": "What needs to happen? Try “pay rent friday”",
@@ -245,6 +239,26 @@
     "busy": "Working…",
     "unavailable": "Sign in for sync first — sharing needs an account.",
     "error": "That did not work. Check the code and try again."
+  },
+  "theme": {
+    "title": "Theme",
+    "change": "Change theme",
+    "blurb": "One palette for the whole list. Your pick follows your account.",
+    "group": {
+      "iphone": "iPhone",
+      "trend": "Trend",
+      "classic": "Classic"
+    },
+    "status": {
+      "local": "Saved on this device",
+      "syncing": "Saving…",
+      "synced": "Synced to your account",
+      "error": "Saved here — account sync failed"
+    },
+    "dark": "Dark",
+    "light": "Light",
+    "glass": "Glass",
+    "saved": "Every preset restyles the whole app — nothing is hard-coded."
   },
   "footer": {
     "saved": "Saved in this browser"

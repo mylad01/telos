@@ -1,4 +1,13 @@
-export type Repeat = 'none' | 'daily' | 'weekly';
+export type Repeat = 'none' | 'daily' | 'weekly' | 'monthly';
+
+/** 1 is the highest priority; 0 means none set. */
+export type Priority = 0 | 1 | 2 | 3;
+
+export type Subtask = { id: string; title: string; done: boolean };
+
+export const DEFAULT_LIST = 'Inbox';
+export const TAGS_MAX = 5;
+export const SUBTASKS_MAX = 30;
 
 export type Task = {
   id: string;
@@ -16,11 +25,26 @@ export type Task = {
   updatedAt: number;
   /** Set when deleted; kept as a tombstone so other devices delete it too. */
   deletedAt: number | null;
+  /** Optional free-text note under the title; empty string when unused. */
+  notes: string;
+  /** Pinned tasks sort above the rest of their list. */
+  pinned: boolean;
+  /** Local reminder time on the due date, HH:MM; null when off. */
+  remindAt: string | null;
+  /** Which list the task lives in; 'Inbox' when never filed. */
+  list: string;
+  /** Lowercase labels, at most TAGS_MAX. */
+  tags: string[];
+  priority: Priority;
+  /** Tasks stay out of the Today view until this date; null means wait for nothing. */
+  start: string | null;
+  subtasks: Subtask[];
 };
 
 export type Filter = 'today' | 'week' | 'all' | 'done';
 
-const REPEATS: Repeat[] = ['none', 'daily', 'weekly'];
+const REPEATS: Repeat[] = ['none', 'daily', 'weekly', 'monthly'];
+export const NOTES_MAX = 500;
 export const TOMBSTONE_MS = 30 * 86_400_000;
 
 /**
@@ -52,7 +76,65 @@ export function parseTask(value: unknown): Task | null {
     previousId: typeof task.previousId === 'string' ? task.previousId : null,
     updatedAt: typeof task.updatedAt === 'number' ? task.updatedAt : task.createdAt,
     deletedAt: typeof task.deletedAt === 'number' ? task.deletedAt : null,
+    notes: typeof task.notes === 'string' ? task.notes.slice(0, NOTES_MAX) : '',
+    pinned: task.pinned === true,
+    remindAt:
+      typeof task.remindAt === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(task.remindAt)
+        ? task.remindAt
+        : null,
+    list:
+      typeof task.list === 'string' && task.list.trim()
+        ? task.list.trim().slice(0, 40)
+        : DEFAULT_LIST,
+    tags: parseTags(task.tags),
+    priority: [1, 2, 3].includes(task.priority as number)
+      ? (task.priority as Priority)
+      : 0,
+    start:
+      typeof task.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(task.start) ? task.start : null,
+    subtasks: parseSubtasks(task.subtasks),
   };
+}
+
+export function normalizeTag(raw: string): string {
+  return raw.trim().toLowerCase().replace(/^#/, '').slice(0, 24);
+}
+
+export function parseTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const tags: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') continue;
+    const tag = normalizeTag(item);
+    if (tag && !tags.includes(tag)) tags.push(tag);
+    if (tags.length === TAGS_MAX) break;
+  }
+  return tags;
+}
+
+export function parseSubtasks(value: unknown): Subtask[] {
+  if (!Array.isArray(value)) return [];
+  const subtasks: Subtask[] = [];
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null) continue;
+    const entry = item as Record<string, unknown>;
+    if (typeof entry.id !== 'string' || typeof entry.title !== 'string') continue;
+    const title = entry.title.trim().slice(0, 140);
+    if (!title) continue;
+    subtasks.push({ id: entry.id, title, done: entry.done === true });
+    if (subtasks.length === SUBTASKS_MAX) break;
+  }
+  return subtasks;
+}
+
+/** Lists in use, Inbox first, then alphabetical. */
+export function listsOf(tasks: Task[]): string[] {
+  const names = new Set<string>([DEFAULT_LIST]);
+  for (const task of tasks) {
+    if (task.deletedAt === null) names.add(task.list);
+  }
+  const rest = [...names].filter((name) => name !== DEFAULT_LIST).sort((a, b) => a.localeCompare(b));
+  return [DEFAULT_LIST, ...rest];
 }
 
 /**

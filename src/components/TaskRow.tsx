@@ -1,28 +1,59 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { addDays, daysFromToday, parseISODate } from '@/lib/dates';
-import type { Task } from '@/lib/tasks';
+import { parseTags, type Priority, type Repeat, type Subtask, type Task } from '@/lib/tasks';
 
 type Tone = 'today' | 'overdue' | 'future';
 const LOCALE = 'en';
 
+export type TaskPatch = Partial<
+  Pick<Task, 'title' | 'due' | 'repeat' | 'notes' | 'pinned' | 'remindAt' | 'list' | 'tags' | 'priority' | 'start' | 'subtasks'>
+>;
+
+const REPEATS: Repeat[] = ['none', 'daily', 'weekly', 'monthly'];
+const PRIORITIES: Priority[] = [0, 1, 2, 3];
+
+function subtaskId(): string {
+  return `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
 export function TaskRow({
   task,
   today,
+  lists,
   onToggle,
   onDelete,
   onReschedule,
+  onUpdate,
+  onTagFilter,
 }: {
   task: Task;
   today: string;
+  lists: string[];
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onReschedule: (id: string, due: string) => void;
+  onUpdate: (id: string, patch: TaskPatch) => void;
+  onTagFilter: (tag: string) => void;
 }) {
   const t = useTranslations('task');
   const diff = daysFromToday(task.due, today);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({
+    title: task.title,
+    due: task.due,
+    start: task.start ?? '',
+    repeat: task.repeat,
+    notes: task.notes,
+    remindAt: task.remindAt ?? '',
+    list: task.list,
+    tags: task.tags.join(', '),
+    priority: task.priority,
+    subtasks: task.subtasks,
+    subtask: '',
+  });
 
   const label = useMemo(() => {
     const sameYear = parseISODate(task.due).getFullYear() === parseISODate(today).getFullYear();
@@ -42,7 +73,15 @@ export function TaskRow({
   }, [diff, task.done, task.due, t, today]);
 
   const repeatLabel =
-    task.repeat === 'daily' ? t('repeatDaily') : task.repeat === 'weekly' ? t('repeatWeekly') : null;
+    task.repeat === 'daily'
+      ? t('repeatDaily')
+      : task.repeat === 'weekly'
+        ? t('repeatWeekly')
+        : task.repeat === 'monthly'
+          ? t('repeatMonthly')
+          : null;
+
+  const doneSubtasks = task.subtasks.filter((item) => item.done).length;
 
   const targets = [
     { key: 'today', due: today, label: t('chipToday'), aria: t('rescheduleToday', { title: task.title }) },
@@ -60,8 +99,280 @@ export function TaskRow({
     },
   ];
 
+  function openEditor() {
+    setDraft({
+      title: task.title,
+      due: task.due,
+      start: task.start ?? '',
+      repeat: task.repeat,
+      notes: task.notes,
+      remindAt: task.remindAt ?? '',
+      list: task.list,
+      tags: task.tags.join(', '),
+      priority: task.priority,
+      subtasks: task.subtasks,
+      subtask: '',
+    });
+    setEditing(true);
+  }
+
+  function save(event: React.FormEvent) {
+    event.preventDefault();
+    const title = draft.title.trim();
+    if (!title) return;
+    onUpdate(task.id, {
+      title,
+      due: draft.due || task.due,
+      start: draft.start || null,
+      repeat: draft.repeat,
+      notes: draft.notes.trim(),
+      remindAt: draft.remindAt || null,
+      list: draft.list.trim() || 'Inbox',
+      tags: parseTags(draft.tags.split(',')),
+      priority: draft.priority,
+      subtasks: draft.subtasks,
+    });
+    setEditing(false);
+  }
+
+  function addSubtask() {
+    const title = draft.subtask.trim();
+    if (!title) return;
+    setDraft({
+      ...draft,
+      subtasks: [...draft.subtasks, { id: subtaskId(), title, done: false }],
+      subtask: '',
+    });
+  }
+
+  if (editing) {
+    return (
+      <li className="task is-editing">
+        <form
+          className="task-form"
+          onSubmit={save}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              setEditing(false);
+            }
+          }}
+        >
+          <h3 className="sr-only">{t('editTitle')}</h3>
+          <label className="field">
+            <span className="field-label">{t('titleLabel')}</span>
+            <input
+              className="field-input"
+              value={draft.title}
+              autoFocus
+              required
+              maxLength={200}
+              onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+            />
+          </label>
+
+          <div className="field-row">
+            <label className="field">
+              <span className="field-label">{t('startLabel')}</span>
+              <input
+                className="field-input"
+                type="date"
+                value={draft.start}
+                max={draft.due || undefined}
+                onChange={(event) => setDraft({ ...draft, start: event.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">{t('dueLabel')}</span>
+              <input
+                className="field-input"
+                type="date"
+                value={draft.due}
+                onChange={(event) => setDraft({ ...draft, due: event.target.value })}
+              />
+            </label>
+          </div>
+
+          <div className="field-row">
+            <label className="field">
+              <span className="field-label">{t('listLabel')}</span>
+              <input
+                className="field-input"
+                value={draft.list}
+                list="task-lists"
+                maxLength={40}
+                onChange={(event) => setDraft({ ...draft, list: event.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">{t('remindLabel')}</span>
+              <input
+                className="field-input"
+                type="time"
+                value={draft.remindAt}
+                onChange={(event) => setDraft({ ...draft, remindAt: event.target.value })}
+              />
+            </label>
+          </div>
+
+          <label className="field">
+            <span className="field-label">{t('tagsLabel')}</span>
+            <input
+              className="field-input"
+              value={draft.tags}
+              placeholder={t('tagsPlaceholder')}
+              maxLength={120}
+              onChange={(event) => setDraft({ ...draft, tags: event.target.value })}
+            />
+          </label>
+
+          <fieldset className="field">
+            <legend className="field-label">{t('priorityLabel')}</legend>
+            <div className="repeat-chips">
+              {PRIORITIES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="chip"
+                  aria-pressed={draft.priority === value}
+                  onClick={() => setDraft({ ...draft, priority: value })}
+                >
+                  {value === 0 ? t('priorityNone') : t('priorityLevel', { level: value })}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="field">
+            <legend className="field-label">{t('repeatLabel')}</legend>
+            <div className="repeat-chips">
+              {REPEATS.map((repeat) => (
+                <button
+                  key={repeat}
+                  type="button"
+                  className="chip"
+                  aria-pressed={draft.repeat === repeat}
+                  onClick={() => setDraft({ ...draft, repeat })}
+                >
+                  {repeat === 'none'
+                    ? t('repeatNone')
+                    : repeat === 'daily'
+                      ? t('repeatDaily')
+                      : repeat === 'weekly'
+                        ? t('repeatWeekly')
+                        : t('repeatMonthly')}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="field">
+            <legend className="field-label">{t('subtasksLabel')}</legend>
+            {draft.subtasks.length > 0 && (
+              <ul className="subtask-edit-list">
+                {draft.subtasks.map((subtask) => (
+                  <li key={subtask.id} className="subtask-edit">
+                    <input
+                      type="checkbox"
+                      checked={subtask.done}
+                      aria-label={t('subtaskDone', { title: subtask.title })}
+                      onChange={() =>
+                        setDraft({
+                          ...draft,
+                          subtasks: draft.subtasks.map((item) =>
+                            item.id === subtask.id ? { ...item, done: !item.done } : item,
+                          ),
+                        })
+                      }
+                    />
+                    <input
+                      className="subtask-title"
+                      value={subtask.title}
+                      maxLength={140}
+                      aria-label={t('subtaskTitle', { title: subtask.title })}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          subtasks: draft.subtasks.map((item) =>
+                            item.id === subtask.id
+                              ? { ...item, title: event.target.value }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="task-tool"
+                      aria-label={t('subtaskRemove', { title: subtask.title })}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          subtasks: draft.subtasks.filter((item) => item.id !== subtask.id),
+                        })
+                      }
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="subtask-add">
+              <input
+                className="field-input"
+                value={draft.subtask}
+                placeholder={t('subtaskPlaceholder')}
+                maxLength={140}
+                aria-label={t('subtaskPlaceholder')}
+                onChange={(event) => setDraft({ ...draft, subtask: event.target.value })}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addSubtask();
+                  }
+                }}
+              />
+              <button type="button" className="button-quiet" onClick={addSubtask}>
+                {t('subtaskAdd')}
+              </button>
+            </div>
+          </fieldset>
+
+          <label className="field">
+            <span className="field-label">{t('noteLabel')}</span>
+            <textarea
+              className="field-input field-textarea"
+              value={draft.notes}
+              rows={2}
+              maxLength={500}
+              placeholder={t('notePlaceholder')}
+              onChange={(event) => setDraft({ ...draft, notes: event.target.value })}
+            />
+          </label>
+
+          <div className="task-form-actions">
+            <button type="submit" className="button-primary">
+              {t('save')}
+            </button>
+            <button type="button" className="button-quiet" onClick={() => setEditing(false)}>
+              {t('cancel')}
+            </button>
+          </div>
+        </form>
+      </li>
+    );
+  }
+
   return (
     <li className={`task${task.done ? ' is-done' : ''}`} data-task-id={task.id}>
+      <datalist id="task-lists">
+        {lists.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
       <button
         type="button"
         className="tick"
@@ -77,9 +388,25 @@ export function TaskRow({
       </button>
 
       <div className="task-body">
-        <span className="task-title">{task.title}</span>
+        <span className="task-title">
+          {task.priority > 0 && (
+            <span className="priority-dot" data-priority={task.priority} aria-hidden="true" />
+          )}
+          {task.title}
+        </span>
+        {task.notes && <span className="task-note">{task.notes}</span>}
         <span className="task-meta" data-tone={label.tone}>
+          <span className="task-list-name">{task.list}</span>
           <span>{label.text}</span>
+          {task.remindAt && (
+            <span className="task-reminder">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              {t('remindAt', { time: task.remindAt })}
+            </span>
+          )}
           {repeatLabel && (
             <span className="task-repeat" aria-label={t('repeats', { repeat: repeatLabel })}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -88,6 +415,49 @@ export function TaskRow({
               {repeatLabel}
             </span>
           )}
+          {task.subtasks.length > 0 && (
+            <span
+              className={`task-subtasks${doneSubtasks === task.subtasks.length ? ' is-complete' : ''}`}
+              aria-label={t('subtaskProgress', { done: doneSubtasks, total: task.subtasks.length })}
+            >
+              {t('subtaskProgress', { done: doneSubtasks, total: task.subtasks.length })}
+            </span>
+          )}
+          {task.pinned && <span className="task-pinned">{t('pinned')}</span>}
+          {task.tags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              className="task-tag"
+              aria-label={t('filterByTag', { tag })}
+              onClick={() => onTagFilter(tag)}
+            >
+              #{tag}
+            </button>
+          ))}
+          <span className="task-tools">
+            <button
+              type="button"
+              className="task-tool"
+              aria-pressed={task.pinned}
+              aria-label={task.pinned ? t('unpin', { title: task.title }) : t('pin', { title: task.title })}
+              onClick={() => onUpdate(task.id, { pinned: !task.pinned })}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3.5l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.9l6-.8L12 3.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill={task.pinned ? 'currentColor' : 'none'} />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="task-tool"
+              aria-label={t('edit', { title: task.title })}
+              onClick={openEditor}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 20h4l10.5-10.5a2.1 2.1 0 00-3-3L5 17v3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </span>
         </span>
       </div>
 

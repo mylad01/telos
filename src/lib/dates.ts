@@ -30,19 +30,31 @@ export function daysFromToday(due: string, today = todayISODate()): number {
   return Math.round((b - a) / DAY_MS);
 }
 
+/** Adds calendar months, clamping to the shorter month (31 Jan -> 28 Feb). */
+export function addMonths(value: string, months: number): string {
+  const date = parseISODate(value);
+  const day = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  date.setDate(Math.min(day, lastDay));
+  return toISODate(date);
+}
+
 /**
  * The next date a recurring task falls on, always strictly after today, so a
  * task finished late never lands back in the overdue pile.
  */
 export function nextOccurrence(
   due: string,
-  repeat: 'daily' | 'weekly',
+  repeat: 'daily' | 'weekly' | 'monthly',
   today: string,
 ): string {
-  const step = repeat === 'daily' ? 1 : 7;
-  let next = addDays(due, step);
+  const step = (value: string) =>
+    repeat === 'monthly' ? addMonths(value, 1) : addDays(value, repeat === 'daily' ? 1 : 7);
+  let next = step(due);
   for (let guard = 0; daysFromToday(next, today) <= 0 && guard < 730; guard += 1) {
-    next = addDays(next, step);
+    next = step(next);
   }
   return next;
 }

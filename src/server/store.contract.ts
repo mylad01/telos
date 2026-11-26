@@ -15,6 +15,14 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     previousId: null,
     updatedAt: 1,
     deletedAt: null,
+    notes: '',
+    pinned: false,
+    remindAt: null,
+    list: 'Inbox',
+    tags: [],
+    priority: 0,
+    start: null,
+    subtasks: [],
     ...overrides,
   };
 }

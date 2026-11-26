@@ -13,6 +13,14 @@ export type TaskRow = {
   previous_id: string | null;
   updated_at: number;
   deleted_at: number | null;
+  notes: string;
+  pinned: boolean;
+  remind_at: string | null;
+  list: string;
+  tags: string[];
+  priority: number;
+  start_date: string | null;
+  subtasks: unknown;
   synced_at: number;
 };
 
@@ -31,6 +39,14 @@ export function toRow(task: Task, userId: string): Omit<TaskRow, 'synced_at'> {
     previous_id: task.previousId,
     updated_at: task.updatedAt,
     deleted_at: task.deletedAt,
+    notes: task.notes,
+    pinned: task.pinned,
+    remind_at: task.remindAt,
+    list: task.list,
+    tags: task.tags,
+    priority: task.priority,
+    start_date: task.start,
+    subtasks: task.subtasks,
   };
 }
 
@@ -50,6 +66,14 @@ export function fromRow(value: unknown): { task: Task; syncedAt: number } | null
     previousId: row.previous_id ?? null,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at ?? null,
+    notes: row.notes ?? '',
+    pinned: row.pinned ?? false,
+    remindAt: row.remind_at ?? null,
+    list: row.list ?? 'Inbox',
+    tags: row.tags ?? [],
+    priority: row.priority ?? 0,
+    start: row.start_date ?? null,
+    subtasks: row.subtasks ?? [],
   });
   if (!task) return null;
   return { task, syncedAt: typeof row.synced_at === 'number' ? row.synced_at : 0 };

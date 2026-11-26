@@ -1,35 +1,84 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { parseISODate } from '@/lib/dates';
+import { parseQuickAdd } from '@/lib/quick-add';
 import type { Repeat } from '@/lib/tasks';
 
-const REPEATS: Repeat[] = ['none', 'daily', 'weekly'];
+const REPEATS: Repeat[] = ['none', 'daily', 'weekly', 'monthly'];
+const LOCALE = 'en';
 
 export function Composer({
   today,
+  lists,
   onAdd,
   disabled = false,
 }: {
   today: string;
-  onAdd: (title: string, due: string, repeat: Repeat) => void;
+  lists: string[];
+  onAdd: (title: string, due: string, repeat: Repeat, list: string) => void;
   disabled?: boolean;
 }) {
   const t = useTranslations('composer');
+  const tTask = useTranslations('task');
   const [title, setTitle] = useState('');
   const [due, setDue] = useState(today);
   const [repeat, setRepeat] = useState<Repeat>('none');
+  const [list, setList] = useState(lists[0] ?? 'Inbox');
   const inputRef = useRef<HTMLInputElement>(null);
   const canSubmit = title.trim().length > 0 && !disabled;
 
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    onAdd(trimmed, due || today, repeat);
+  const shortDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat(LOCALE, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      }),
+    [],
+  );
+  const repeatLabel = (value: Repeat) =>
+    value === 'none'
+      ? t('repeat.none')
+      : value === 'daily'
+        ? t('repeat.daily')
+        : value === 'weekly'
+          ? t('repeat.weekly')
+          : t('repeat.monthly');
+
+  const parsed = useMemo(() => parseQuickAdd(title, today), [title, today]);
+  const hint =
+    title.trim() && (parsed.due || parsed.repeat)
+      ? parsed.due && parsed.repeat
+        ? t('parsed', {
+            due: shortDate.format(parseISODate(parsed.due)),
+            repeat: repeatLabel(parsed.repeat),
+          })
+        : parsed.due
+          ? t('parsedDue', { due: shortDate.format(parseISODate(parsed.due)) })
+          : t('parsedRepeat', { repeat: repeatLabel(parsed.repeat ?? 'none') })
+      : null;
+
+  function reset() {
     setTitle('');
     setDue(today);
     setRepeat('none');
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const result = parseQuickAdd(title.trim(), today);
+    const nextTitle = result.title.trim();
+    if (!nextTitle) return;
+    onAdd(
+      nextTitle,
+      result.due ?? due ?? today,
+      repeat !== 'none' ? repeat : (result.repeat ?? 'none'),
+      list.trim() || 'Inbox',
+    );
+    reset();
     inputRef.current?.focus();
   }
 
@@ -43,11 +92,7 @@ export function Composer({
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            setTitle('');
-            setDue(today);
-            setRepeat('none');
-          }
+          if (event.key === 'Escape') reset();
         }}
         placeholder={t('placeholder')}
         aria-label={t('label')}
@@ -56,6 +101,12 @@ export function Composer({
         enterKeyHint="done"
         disabled={disabled}
       />
+
+      {hint && (
+        <p className="composer-parsed" aria-live="polite">
+          {hint}
+        </p>
+      )}
 
       <div className="composer-controls">
         <div className="due-field">
@@ -74,6 +125,31 @@ export function Composer({
             onChange={(event) => setDue(event.target.value)}
             disabled={disabled}
           />
+        </div>
+
+        <div className="list-field">
+          <label htmlFor="task-list">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 6.5h16M4 12h16M4 17.5h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            {t('listLabel')}
+          </label>
+          <input
+            id="task-list"
+            name="list"
+            type="text"
+            value={list}
+            list="composer-lists"
+            maxLength={40}
+            autoComplete="off"
+            onChange={(event) => setList(event.target.value)}
+            disabled={disabled}
+          />
+          <datalist id="composer-lists">
+            {lists.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
         </div>
 
         <button className="btn-add" type="submit" disabled={!canSubmit}>
@@ -97,6 +173,7 @@ export function Composer({
             type="button"
             className="chip"
             aria-pressed={repeat === value}
+            aria-label={tTask('repeats', { repeat: repeatLabel(value) })}
             disabled={disabled}
             onClick={() => setRepeat(value)}
           >

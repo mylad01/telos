@@ -58,7 +58,7 @@ describe('saveTasks', () => {
   it('round-trips tasks', () => {
     const store: Store = new Map();
     (globalThis as { window?: unknown }).window = fakeWindow(store);
-    const task = { ...valid, completedAt: null, repeat: 'none' as const, seriesId: null, previousId: null, updatedAt: 1, deletedAt: null };
+    const task = { ...valid, completedAt: null, repeat: 'none' as const, seriesId: null, previousId: null, updatedAt: 1, deletedAt: null, notes: '', pinned: false, remindAt: null, list: 'Inbox', tags: [] as string[], priority: 0 as const, start: null, subtasks: [] };
     expect(saveTasks([task])).toBe(true);
     expect(loadTasks().tasks).toEqual([task]);
   });

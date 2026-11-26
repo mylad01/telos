@@ -17,9 +17,20 @@ const text = Inter({
 });
 
 export const viewport: Viewport = {
-  themeColor: '#f4eee2',
-  colorScheme: 'light',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f4eee2' },
+    { media: '(prefers-color-scheme: dark)', color: '#17150f' },
+  ],
+  colorScheme: 'light dark',
 };
+
+// Applies the stored theme before first paint, so a dark-mode user never sees
+// a flash of the light palette while React hydrates.
+const THEME_SCRIPT =
+  "try{var s=localStorage.getItem('telos.theme.v1');" +
+  "var d=window.matchMedia('(prefers-color-scheme: dark)').matches;" +
+  "document.documentElement.dataset.theme=" +
+  "(s==='dark'||(s!=='light'&&d))?'dark':'light'}catch(e){}";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('meta');
@@ -39,6 +50,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${display.variable} ${text.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body suppressHydrationWarning>
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>

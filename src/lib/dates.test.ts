@@ -56,6 +56,15 @@ describe('nextOccurrence', () => {
   it('steps past a due date that is already in the future', () => {
     expect(nextOccurrence('2026-12-01', 'weekly', '2026-11-25')).toBe('2026-12-08');
   });
+
+  it('moves a monthly task a month past the reference', () => {
+    expect(nextOccurrence('2026-11-10', 'monthly', '2026-11-25')).toBe('2026-12-10');
+  });
+
+  it('clamps a monthly task to the end of a shorter month', () => {
+    expect(nextOccurrence('2026-01-31', 'monthly', '2026-01-31')).toBe('2026-02-28');
+    expect(nextOccurrence('2026-03-31', 'monthly', '2026-03-31')).toBe('2026-04-30');
+  });
 });
 
 describe('todayISODate', () => {

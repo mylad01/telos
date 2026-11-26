@@ -7,17 +7,28 @@
   "header": {
     "language": "Language"
   },
+  "theme": {
+    "system": "Auto",
+    "light": "Light",
+    "dark": "Dark",
+    "change": "Theme: {mode}. Switch"
+  },
   "composer": {
     "label": "New task",
-    "placeholder": "What needs to happen?",
+    "placeholder": "What needs to happen? Try “pay rent friday”",
     "dueLabel": "Due",
+    "listLabel": "List",
     "add": "Add",
     "hint": "Enter to add · Esc to clear",
     "repeatLabel": "Repeats",
+    "parsed": "Due {due} · {repeat}",
+    "parsedDue": "Due {due}",
+    "parsedRepeat": "Repeats {repeat}",
     "repeat": {
       "none": "Once",
       "daily": "Daily",
-      "weekly": "Weekly"
+      "weekly": "Weekly",
+      "monthly": "Monthly"
     }
   },
   "filters": {
@@ -27,10 +38,24 @@
     "all": "All",
     "done": "Done"
   },
+  "lists": {
+    "label": "Lists",
+    "all": "All lists",
+    "clearTag": "Stop filtering by #{tag}"
+  },
+  "search": {
+    "label": "Search tasks",
+    "placeholder": "Search",
+    "clear": "Clear search",
+    "count": "{count, plural, =0 {No matches} one {# match} other {# matches}}",
+    "emptyTitle": "No matches.",
+    "empty": "Nothing here mentions “{query}”."
+  },
   "list": {
     "sortedBy": "By due date",
     "weekRange": "Next 7 days",
-    "count": "{count, plural, =0 {No tasks} one {# task} other {# tasks}}"
+    "count": "{count, plural, =0 {No tasks} one {# task} other {# tasks}}",
+    "clearDone": "Clear done"
   },
   "summary": {
     "dueToday": "{count, plural, =0 {Nothing due today} one {# task due today} other {# tasks due today}}",
@@ -43,12 +68,43 @@
     "doneToggle": "Mark “{title}” as done",
     "undoneToggle": "Mark “{title}” as not done",
     "delete": "Delete “{title}”",
+    "edit": "Edit “{title}”",
+    "pin": "Pin “{title}”",
+    "unpin": "Unpin “{title}”",
+    "pinned": "Pinned",
+    "editTitle": "Edit task",
+    "titleLabel": "Title",
+    "dueLabel": "Due",
+    "remindLabel": "Reminder",
+    "remindAt": "{time}",
+    "startLabel": "Starts",
+    "listLabel": "List",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "work, urgent",
+    "filterByTag": "Show only #{tag}",
+    "priorityLabel": "Priority",
+    "priorityNone": "None",
+    "priorityLevel": "P{level}",
+    "subtasksLabel": "Sub-tasks",
+    "subtaskPlaceholder": "Add a sub-task",
+    "subtaskAdd": "Add",
+    "subtaskDone": "Tick “{title}”",
+    "subtaskTitle": "Sub-task “{title}”",
+    "subtaskRemove": "Remove “{title}”",
+    "subtaskProgress": "{done}/{total} sub-tasks",
+    "repeatLabel": "Repeats",
+    "repeatNone": "Once",
+    "noteLabel": "Note",
+    "notePlaceholder": "Anything to remember (optional)",
+    "save": "Save",
+    "cancel": "Cancel",
     "dueToday": "Today",
     "dueTomorrow": "Tomorrow",
     "dueYesterday": "Yesterday",
     "overdueBy": "{count, plural, one {# day overdue} other {# days overdue}}",
     "repeatDaily": "Daily",
     "repeatWeekly": "Weekly",
+    "repeatMonthly": "Monthly",
     "repeats": "Repeats {repeat}",
     "reschedule": "Reschedule “{title}”",
     "rescheduleToday": "Move “{title}” to today",
@@ -58,8 +114,12 @@
     "chipTomorrow": "Tomorrow",
     "chipNextWeek": "Next week"
   },
+  "reminders": {
+    "body": "Due today at {time}"
+  },
   "toast": {
     "deleted": "“{title}” deleted",
+    "cleared": "{count, plural, one {# finished task cleared} other {# finished tasks cleared}}",
     "undo": "Undo",
     "dismiss": "Dismiss"
   },

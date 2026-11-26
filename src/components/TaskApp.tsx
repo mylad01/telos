@@ -10,7 +10,7 @@ import { SharePanel } from './SharePanel';
 import { SyncPanel } from './SyncPanel';
 import { TaskRow, type TaskPatch } from './TaskRow';
 import { TemplatesMenu } from './TemplatesMenu';
-import { ThemeStudio } from './ThemeStudio';
+import { ThemeMenu } from './ThemeStudio';
 import { downloadBackup, parseBackup } from '@/lib/backup';
 import { applyBulk, parseBulk } from '@/lib/bulk';
 import { shiftMonth, tasksByDay } from '@/lib/calendar';
@@ -71,7 +71,7 @@ export function TaskApp() {
     return { year: date.getFullYear(), month: date.getMonth() };
   });
   const [today, setToday] = useState<string>(todayISODate);
-  const [panel, setPanel] = useState<'none' | 'focus' | 'templates' | 'share' | 'theme'>('none');
+  const [panel, setPanel] = useState<'none' | 'focus' | 'templates' | 'share'>('none');
   const [focus, setFocus] = useState<FocusState>(stopFocus);
   const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
   const [bulkInput, setBulkInput] = useState('');
@@ -270,7 +270,7 @@ export function TaskApp() {
     setInvites(await listInvites({ url: config.url, key: config.key }, session, shareList));
   }
 
-  function togglePanel(next: 'focus' | 'templates' | 'share' | 'theme') {
+  function togglePanel(next: 'focus' | 'templates' | 'share') {
     const open = panel === next ? 'none' : next;
     setPanel(open);
     if (open === 'share') void refreshInvites();
@@ -589,27 +589,7 @@ export function TaskApp() {
           {t('appName')}
         </span>
         <span className="topbar-rule" aria-hidden="true" />
-        <button
-          type="button"
-          className="theme-toggle"
-          aria-label={t('theme.change')}
-          title={t('theme.title')}
-          aria-pressed={panel === 'theme'}
-          onClick={() => togglePanel('theme')}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M12 3.2a8.8 8.8 0 100 17.6c1.4 0 2-.8 2-1.7 0-.9-.6-1.4-.6-2.2 0-1 .8-1.7 1.9-1.7h1.6c2 0 3.5-1.5 3.5-3.6 0-4.6-3.8-8.4-8.4-8.4z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-            <circle cx="8.4" cy="9" r="1.15" fill="currentColor" />
-            <circle cx="12.6" cy="7.4" r="1.15" fill="currentColor" />
-            <circle cx="7.6" cy="13.2" r="1.15" fill="currentColor" />
-          </svg>
-          <span className="sr-only">{t('theme.title')}</span>
-        </button>
+        <ThemeMenu />
       </header>
 
       <section className="intro">
@@ -761,14 +741,6 @@ export function TaskApp() {
         >
           {t('share.title', { list: shareList })}
         </button>
-        <button
-          type="button"
-          className="panel-tab"
-          aria-pressed={panel === 'theme'}
-          onClick={() => togglePanel('theme')}
-        >
-          {t('theme.title')}
-        </button>
       </div>
 
       {panel === 'focus' && (
@@ -836,8 +808,6 @@ export function TaskApp() {
           )}
         </div>
       )}
-
-      {panel === 'theme' && <ThemeStudio />}
 
       <div className="list-head">
         <span className="list-head-left">

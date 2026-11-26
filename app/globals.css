@@ -1245,17 +1245,25 @@ input {
 /* Theme toggle -------------------------------------------------------- */
 
 .theme-toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   flex: none;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-2);
   cursor: pointer;
+}
+
+/* 44 px hit target without a bulky button in the bar. */
+.theme-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
 }
 
 .theme-toggle:hover {
@@ -2152,7 +2160,7 @@ input {
 .topbar,
 .panel,
 .month,
-.theme-studio,
+.theme-menu,
 .composer {
   background: var(--surface);
   border-radius: var(--radius-md);
@@ -2161,6 +2169,8 @@ input {
 }
 
 .topbar {
+  position: relative;
+  z-index: 30;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   box-shadow: inset 0 -1px 0 var(--glass-tint);
 }
@@ -2178,115 +2188,174 @@ input {
   border-color: var(--alert-border);
 }
 
-.theme-studio {
-  display: grid;
-  gap: 14px;
-  margin-block-start: 8px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-1);
+/* Theme menu: one button, an iOS-style popover ----------------------- */
+
+.theme-menu-wrap {
+  position: relative;
+  flex: none;
 }
 
-.theme-studio-head {
+.theme-menu {
+  position: absolute;
+  inset-block-start: calc(100% + 10px);
+  inset-inline-end: 0;
+  z-index: 60;
+  display: grid;
+  gap: 2px;
+  width: min(276px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 48px -24px rgb(0 0 0 / 0.4),
+    0 2px 10px -4px rgb(0 0 0 / 0.16);
+  transform-origin: top right;
+  animation: theme-menu-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes theme-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-menu {
+    animation: none;
+  }
+}
+
+.theme-menu-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+  padding: 6px 10px 8px;
 }
 
-.theme-studio-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--step-0);
+.theme-menu-title {
+  color: var(--text);
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.theme-studio-blurb,
-.theme-studio-foot {
-  margin: 2px 0 0;
-  color: var(--text-3);
-  font-size: var(--step--1);
-}
-
-.theme-studio-sync {
-  flex-shrink: 0;
-  margin: 0;
+.theme-menu-sync {
   color: var(--text-3);
   font-size: 11px;
   text-align: end;
 }
 
-.theme-studio-sync[data-sync='synced'] {
+.theme-menu-sync[data-sync='synced'] {
   color: var(--accent);
 }
 
-.theme-studio-sync[data-sync='error'] {
+.theme-menu-sync[data-sync='error'] {
   color: var(--overdue);
 }
 
-.theme-group {
+.theme-menu-group {
   display: grid;
-  gap: 6px;
+  gap: 1px;
+  padding-block: 2px;
 }
 
-.theme-group-label {
+.theme-menu-group + .theme-menu-group {
+  margin-block-start: 4px;
+  padding-block-start: 6px;
+  border-block-start: 1px solid var(--border);
+}
+
+.theme-menu-label {
   margin: 0;
+  padding: 4px 10px;
   color: var(--text-3);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.theme-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.theme-card {
-  display: grid;
-  gap: 6px;
+.theme-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  padding: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  min-height: 44px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
   color: var(--text);
   font: inherit;
   text-align: start;
   cursor: pointer;
+  transition: background-color 120ms ease-out;
 }
 
-.theme-card[aria-pressed='true'] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+.theme-item:hover {
+  background: var(--hover);
 }
 
-.theme-swatch {
+.theme-item:active {
+  background: var(--accent-soft);
+}
+
+.theme-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.theme-item[aria-checked='true'] {
+  background: var(--accent-soft);
+}
+
+.theme-item-swatch {
   display: flex;
-  gap: 0;
-  height: 22px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  flex: none;
+  width: 24px;
+  height: 24px;
   overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
 }
 
-.theme-swatch span {
+.theme-item-swatch span {
   flex: 1;
 }
 
-.theme-card-name {
-  font-size: var(--step--1);
-  font-weight: 600;
+.theme-item-text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 1px;
+  min-width: 0;
 }
 
-.theme-card-note {
+.theme-item-name {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-item-note {
   color: var(--text-3);
   font-size: 11px;
+}
+
+.theme-item-check {
+  flex: none;
+  color: var(--accent);
 }
 
 

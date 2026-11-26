@@ -65,6 +65,8 @@
     "progress": "{done} of {total} done"
   },
   "task": {
+    "whenLabel": "When",
+    "evening": "This evening",
     "doneToggle": "Mark “{title}” as done",
     "undoneToggle": "Mark “{title}” as not done",
     "delete": "Delete “{title}”",
@@ -169,6 +171,23 @@
     "errorTitle": "Tasks can't be saved",
     "errorBody": "Your browser blocked local storage. Private windows often do. You can keep working, but nothing will survive a reload.",
     "loading": "Loading your tasks"
+  },
+  "calendar": {
+    "toggle": "Month",
+    "label": "Month calendar",
+    "previous": "Previous month",
+    "next": "Next month",
+    "clear": "Show the whole list again",
+    "day": "Day {day}: {count, plural, =0 {nothing due} one {# task} other {# tasks}}"
+  },
+  "sections": {
+    "today": "Today",
+    "evening": "This evening"
+  },
+  "stats": {
+    "label": "Completed in the last seven days",
+    "week": "This week {done} done · last week {last}",
+    "streak": "{count, plural, one {# day streak} other {# day streak}}"
   },
   "footer": {
     "saved": "Saved in this browser"

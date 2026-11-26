@@ -30,6 +30,7 @@ function make(overrides: Partial<Task> = {}): Task {
     priority: 0,
     start: null,
     subtasks: [],
+    evening: false,
     ...overrides,
   };
 }

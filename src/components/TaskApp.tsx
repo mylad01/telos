@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Composer } from './Composer';
+import { MonthView } from './MonthView';
 import { SyncPanel } from './SyncPanel';
 import { TaskRow, type TaskPatch } from './TaskRow';
 import { downloadBackup, parseBackup } from '@/lib/backup';
+import { shiftMonth, tasksByDay } from '@/lib/calendar';
 import { addDays, daysFromToday, nextOccurrence, parseISODate, todayISODate } from '@/lib/dates';
 import { visibleTasks } from '@/lib/filters';
 import { dueReminders, markNotified, type NotifiedMap } from '@/lib/reminders';
 import { searchTasks } from '@/lib/search';
+import { donePerDay, streak as streakOf, weekRecap } from '@/lib/stats';
 import { loadTasks, saveTasks } from '@/lib/storage';
 import {
   listsOf,
@@ -40,6 +43,12 @@ export function TaskApp() {
   const [filter, setFilter] = useState<Filter>('today');
   const [listScope, setListScope] = useState<string | null>(null);
   const [tagScope, setTagScope] = useState<string | null>(null);
+  const [dayScope, setDayScope] = useState<string | null>(null);
+  const [monthOpen, setMonthOpen] = useState(false);
+  const [view, setView] = useState(() => {
+    const date = parseISODate(todayISODate());
+    return { year: date.getFullYear(), month: date.getMonth() };
+  });
   const [today, setToday] = useState<string>(todayISODate);
   const [storageBlocked, setStorageBlocked] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -141,6 +150,17 @@ export function TaskApp() {
     [],
   );
 
+  const shortDateFormat = useMemo(
+    () =>
+      new Intl.DateTimeFormat(LOCALE, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      }),
+    [],
+  );
+
   const all = useMemo(
     () => (tasks ?? []).filter((task) => task.deletedAt === null),
     [tasks],
@@ -183,14 +203,22 @@ export function TaskApp() {
     return map;
   }, [all]);
 
-  const visible = useMemo(
-    () =>
-      searchTasks(
-        visibleTasks(tasks ?? [], filter, today, { list: listScope, tag: tagScope }),
-        query,
-      ),
-    [tasks, filter, today, query, listScope, tagScope],
-  );
+  const visible = useMemo(() => {
+    const base = visibleTasks(tasks ?? [], dayScope ? 'all' : filter, today, {
+      list: listScope,
+      tag: tagScope,
+    });
+    const narrowed = dayScope ? base.filter((task) => task.due === dayScope) : base;
+    return searchTasks(narrowed, query);
+  }, [tasks, filter, today, query, listScope, tagScope, dayScope]);
+
+  const calendarCounts = useMemo(() => tasksByDay(tasks ?? []), [tasks]);
+
+  const week = useMemo(() => donePerDay(all, today, 7), [all, today]);
+  const recap = useMemo(() => weekRecap(all, today), [all, today]);
+  const streakDays = useMemo(() => streakOf(all, today), [all, today]);
+  const hasHistory = useMemo(() => all.some((task) => task.completedAt !== null), [all]);
+  const weekPeak = useMemo(() => Math.max(1, ...week.map((day) => day.count)), [week]);
 
   function addTask(title: string, due: string, repeat: Repeat, list: string) {
     if (tasks === null) return;
@@ -216,6 +244,7 @@ export function TaskApp() {
       priority: 0,
       start: null,
       subtasks: [],
+      evening: false,
     };
     setTasks([task, ...tasks]);
     if (filter === 'done') setFilter('today');
@@ -265,6 +294,7 @@ export function TaskApp() {
         priority: task.priority,
         start: task.start,
         subtasks: task.subtasks,
+        evening: task.evening,
       };
       return [...marked, next];
     });
@@ -396,6 +426,14 @@ export function TaskApp() {
           ? counts.done
           : counts.total;
   const searching = query.trim().length > 0;
+  const splitEvening =
+    filter === 'today' && !searching && !dayScope && visible.some((task) => task.evening);
+  const groups = splitEvening
+    ? [
+        { key: 'today', label: t('sections.today'), tasks: visible.filter((task) => !task.evening) },
+        { key: 'evening', label: t('sections.evening'), tasks: visible.filter((task) => task.evening) },
+      ].filter((group) => group.tasks.length > 0)
+    : [{ key: 'all', label: '', tasks: visible }];
   const themeLabel =
     theme === 'system' ? t('theme.system') : theme === 'light' ? t('theme.light') : t('theme.dark');
 
@@ -533,9 +571,46 @@ export function TaskApp() {
         )}
       </div>
 
+      <button
+        type="button"
+        className="month-toggle"
+        aria-pressed={monthOpen}
+        onClick={() => setMonthOpen(!monthOpen)}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+        {t('calendar.toggle')}
+      </button>
+
+      {monthOpen && (
+        <MonthView
+          year={view.year}
+          month={view.month}
+          today={today}
+          selected={dayScope}
+          counts={calendarCounts}
+          onSelect={setDayScope}
+          onShift={(delta) => setView(shiftMonth(view.year, view.month, delta))}
+        />
+      )}
+
       <div className="list-head">
         <span className="list-head-left">
-          {tagScope ? (
+          {dayScope ? (
+            <button
+              type="button"
+              className="tag-chip"
+              aria-label={t('calendar.clear')}
+              onClick={() => setDayScope(null)}
+            >
+              {shortDateFormat.format(parseISODate(dayScope))}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+              </svg>
+            </button>
+          ) : tagScope ? (
             <button
               type="button"
               className="tag-chip"
@@ -594,21 +669,28 @@ export function TaskApp() {
           )}
         </div>
       ) : (
-        <ul className="task-list">
-          {visible.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              today={today}
-              lists={lists}
-              onToggle={toggleTask}
-              onDelete={deleteTask}
-              onReschedule={rescheduleTask}
-              onUpdate={updateTask}
-              onTagFilter={(tag) => setTagScope(tagScope === tag ? null : tag)}
-            />
+        <div className="groups">
+          {groups.map((group) => (
+            <div className="group" key={group.key}>
+              {group.label && <h3 className="group-head">{group.label}</h3>}
+              <ul className="task-list">
+                {group.tasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    today={today}
+                    lists={lists}
+                    onToggle={toggleTask}
+                    onDelete={deleteTask}
+                    onReschedule={rescheduleTask}
+                    onUpdate={updateTask}
+                    onTagFilter={(tag) => setTagScope(tagScope === tag ? null : tag)}
+                  />
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       <footer className="footer">
@@ -629,6 +711,33 @@ export function TaskApp() {
           </div>
         )}
         <p className="footnote">{t('footer.saved')}</p>
+        {hasHistory && (
+          <div className="stats">
+            <div className="stats-bars" role="img" aria-label={t('stats.label')}>
+              {week.map((day) => (
+                <span className="stats-bar-wrap" key={day.date}>
+                  <span
+                    className="stats-bar"
+                    style={{ height: `${Math.round((day.count / weekPeak) * 100)}%` }}
+                    data-empty={day.count === 0 ? 'true' : undefined}
+                  />
+                </span>
+              ))}
+            </div>
+            <p className="stats-text">
+              {t('stats.week', {
+                done: numberFormat.format(recap.thisWeek),
+                last: numberFormat.format(recap.lastWeek),
+              })}
+              {streakDays > 0 && (
+                <>
+                  {' · '}
+                  {t('stats.streak', { count: streakDays })}
+                </>
+              )}
+            </p>
+          </div>
+        )}
       </footer>
 
       <SyncPanel

@@ -21,6 +21,7 @@ export type TaskRow = {
   priority: number;
   start_date: string | null;
   subtasks: unknown;
+  evening: boolean;
   synced_at: number;
 };
 
@@ -47,6 +48,7 @@ export function toRow(task: Task, userId: string): Omit<TaskRow, 'synced_at'> {
     priority: task.priority,
     start_date: task.start,
     subtasks: task.subtasks,
+    evening: task.evening,
   };
 }
 
@@ -74,6 +76,7 @@ export function fromRow(value: unknown): { task: Task; syncedAt: number } | null
     priority: row.priority ?? 0,
     start: row.start_date ?? null,
     subtasks: row.subtasks ?? [],
+    evening: row.evening ?? false,
   });
   if (!task) return null;
   return { task, syncedAt: typeof row.synced_at === 'number' ? row.synced_at : 0 };

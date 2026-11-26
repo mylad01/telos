@@ -9,7 +9,7 @@ type Tone = 'today' | 'overdue' | 'future';
 const LOCALE = 'en';
 
 export type TaskPatch = Partial<
-  Pick<Task, 'title' | 'due' | 'repeat' | 'notes' | 'pinned' | 'remindAt' | 'list' | 'tags' | 'priority' | 'start' | 'subtasks'>
+  Pick<Task, 'title' | 'due' | 'repeat' | 'notes' | 'pinned' | 'remindAt' | 'list' | 'tags' | 'priority' | 'start' | 'subtasks' | 'evening'>
 >;
 
 const REPEATS: Repeat[] = ['none', 'daily', 'weekly', 'monthly'];
@@ -52,6 +52,7 @@ export function TaskRow({
     tags: task.tags.join(', '),
     priority: task.priority,
     subtasks: task.subtasks,
+    evening: task.evening,
     subtask: '',
   });
 
@@ -111,6 +112,7 @@ export function TaskRow({
       tags: task.tags.join(', '),
       priority: task.priority,
       subtasks: task.subtasks,
+      evening: task.evening,
       subtask: '',
     });
     setEditing(true);
@@ -131,6 +133,7 @@ export function TaskRow({
       tags: parseTags(draft.tags.split(',')),
       priority: draft.priority,
       subtasks: draft.subtasks,
+      evening: draft.evening,
     });
     setEditing(false);
   }
@@ -240,6 +243,20 @@ export function TaskRow({
                   {value === 0 ? t('priorityNone') : t('priorityLevel', { level: value })}
                 </button>
               ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="field">
+            <legend className="field-label">{t('whenLabel')}</legend>
+            <div className="repeat-chips">
+              <button
+                type="button"
+                className="chip"
+                aria-pressed={draft.evening}
+                onClick={() => setDraft({ ...draft, evening: !draft.evening })}
+              >
+                {t('evening')}
+              </button>
             </div>
           </fieldset>
 
@@ -415,6 +432,7 @@ export function TaskRow({
               {repeatLabel}
             </span>
           )}
+          {task.evening && <span className="task-evening">{t('evening')}</span>}
           {task.subtasks.length > 0 && (
             <span
               className={`task-subtasks${doneSubtasks === task.subtasks.length ? ' is-complete' : ''}`}

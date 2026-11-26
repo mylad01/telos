@@ -39,6 +39,8 @@ export type Task = {
   /** Tasks stay out of the Today view until this date; null means wait for nothing. */
   start: string | null;
   subtasks: Subtask[];
+  /** Sits in the "This evening" section of Today. */
+  evening: boolean;
 };
 
 export type Filter = 'today' | 'week' | 'all' | 'done';
@@ -93,6 +95,7 @@ export function parseTask(value: unknown): Task | null {
     start:
       typeof task.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(task.start) ? task.start : null,
     subtasks: parseSubtasks(task.subtasks),
+    evening: task.evening === true,
   };
 }
 

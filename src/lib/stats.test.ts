@@ -27,6 +27,7 @@ function doneOn(date: string, id = date): Task {
     start: null,
     subtasks: [],
     evening: false,
+    order: null,
   };
 }
 

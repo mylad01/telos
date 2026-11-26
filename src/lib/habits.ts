@@ -1,4 +1,4 @@
-import { addDays, parseISODate, toISODate } from './dates';
+import { addDays, addMonths, endOfMonth, parseISODate, toISODate } from './dates';
 import type { Repeat, Task } from './tasks';
 
 export type HabitStat = {
@@ -12,14 +12,33 @@ export type HabitStat = {
 const MAX_HABITS = 5;
 
 function stepBack(date: string, repeat: Repeat, anchorDay: number): string {
-  if (repeat === 'daily') return addDays(date, -1);
-  if (repeat === 'weekly') return addDays(date, -7);
-  const parsed = parseISODate(date);
-  const target = new Date(parsed.getFullYear(), parsed.getMonth() - 1, 1);
-  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-  return toISODate(
-    new Date(target.getFullYear(), target.getMonth(), Math.min(anchorDay, lastDay)),
-  );
+  switch (repeat) {
+    case 'daily':
+      return addDays(date, -1);
+    case 'weekdays': {
+      let previous = addDays(date, -1);
+      const day = parseISODate(previous).getDay();
+      if (day === 0) previous = addDays(previous, -2);
+      else if (day === 6) previous = addDays(previous, -1);
+      return previous;
+    }
+    case 'weekly':
+      return addDays(date, -7);
+    case 'biweekly':
+      return addDays(date, -14);
+    case 'monthly': {
+      const parsed = parseISODate(date);
+      const target = new Date(parsed.getFullYear(), parsed.getMonth() - 1, 1);
+      const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+      return toISODate(
+        new Date(target.getFullYear(), target.getMonth(), Math.min(anchorDay, lastDay)),
+      );
+    }
+    case 'monthly-last':
+      return endOfMonth(addMonths(date, -1));
+    case 'none':
+      return date;
+  }
 }
 
 export function habitStats(tasks: Task[], today: string): HabitStat[] {

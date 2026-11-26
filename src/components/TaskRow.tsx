@@ -12,7 +12,25 @@ export type TaskPatch = Partial<
   Pick<Task, 'title' | 'due' | 'repeat' | 'notes' | 'pinned' | 'remindAt' | 'list' | 'tags' | 'priority' | 'start' | 'subtasks' | 'evening'>
 >;
 
-const REPEATS: Repeat[] = ['none', 'daily', 'weekly', 'monthly'];
+const REPEATS: Repeat[] = [
+  'none',
+  'daily',
+  'weekdays',
+  'weekly',
+  'biweekly',
+  'monthly',
+  'monthly-last',
+];
+
+const REPEAT_KEYS: Record<Repeat, string> = {
+  none: 'repeatNone',
+  daily: 'repeatDaily',
+  weekdays: 'repeatWeekdays',
+  weekly: 'repeatWeekly',
+  biweekly: 'repeatBiweekly',
+  monthly: 'repeatMonthly',
+  'monthly-last': 'repeatMonthlyLast',
+};
 const PRIORITIES: Priority[] = [0, 1, 2, 3];
 
 function subtaskId(): string {
@@ -28,6 +46,7 @@ export function TaskRow({
   onReschedule,
   onUpdate,
   onTagFilter,
+  onDropBefore,
 }: {
   task: Task;
   today: string;
@@ -37,10 +56,14 @@ export function TaskRow({
   onReschedule: (id: string, due: string) => void;
   onUpdate: (id: string, patch: TaskPatch) => void;
   onTagFilter: (tag: string) => void;
+  /** Present only while manual ordering is on: drag `movingId` before this row. */
+  onDropBefore?: (movingId: string, targetId: string) => void;
 }) {
   const t = useTranslations('task');
   const diff = daysFromToday(task.due, today);
   const [editing, setEditing] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [dropTarget, setDropTarget] = useState(false);
   const [draft, setDraft] = useState({
     title: task.title,
     due: task.due,
@@ -73,14 +96,7 @@ export function TaskRow({
     return { text: date, tone: 'future' as Tone };
   }, [diff, task.done, task.due, t, today]);
 
-  const repeatLabel =
-    task.repeat === 'daily'
-      ? t('repeatDaily')
-      : task.repeat === 'weekly'
-        ? t('repeatWeekly')
-        : task.repeat === 'monthly'
-          ? t('repeatMonthly')
-          : null;
+  const repeatLabel = task.repeat === 'none' ? null : t(REPEAT_KEYS[task.repeat]);
 
   const doneSubtasks = task.subtasks.filter((item) => item.done).length;
 
@@ -202,7 +218,7 @@ export function TaskRow({
               <input
                 className="field-input"
                 value={draft.list}
-                list="task-lists"
+                list={`task-lists-${task.id}`}
                 maxLength={40}
                 onChange={(event) => setDraft({ ...draft, list: event.target.value })}
               />
@@ -271,13 +287,7 @@ export function TaskRow({
                   aria-pressed={draft.repeat === repeat}
                   onClick={() => setDraft({ ...draft, repeat })}
                 >
-                  {repeat === 'none'
-                    ? t('repeatNone')
-                    : repeat === 'daily'
-                      ? t('repeatDaily')
-                      : repeat === 'weekly'
-                        ? t('repeatWeekly')
-                        : t('repeatMonthly')}
+                  {t(REPEAT_KEYS[repeat])}
                 </button>
               ))}
             </div>
@@ -384,8 +394,52 @@ export function TaskRow({
   }
 
   return (
-    <li className={`task${task.done ? ' is-done' : ''}`} data-task-id={task.id}>
-      <datalist id="task-lists">
+    <li
+      className={`task${task.done ? ' is-done' : ''}`}
+      data-task-id={task.id}
+      data-dragging={dragging ? 'true' : undefined}
+      data-drop-target={dropTarget ? 'true' : undefined}
+      draggable={onDropBefore ? true : undefined}
+      onDragStart={
+        onDropBefore
+          ? (event) => {
+              event.dataTransfer.setData('text/telos-task', task.id);
+              event.dataTransfer.effectAllowed = 'move';
+              setDragging(true);
+            }
+          : undefined
+      }
+      onDragEnd={
+        onDropBefore
+          ? () => {
+              setDragging(false);
+              setDropTarget(false);
+            }
+          : undefined
+      }
+      onDragOver={
+        onDropBefore
+          ? (event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+              setDropTarget(true);
+            }
+          : undefined
+      }
+      onDragLeave={onDropBefore ? () => setDropTarget(false) : undefined}
+      onDrop={
+        onDropBefore
+          ? (event) => {
+              event.preventDefault();
+              const movingId = event.dataTransfer.getData('text/telos-task');
+              setDropTarget(false);
+              setDragging(false);
+              if (movingId && movingId !== task.id) onDropBefore(movingId, task.id);
+            }
+          : undefined
+      }
+    >
+      <datalist id={`task-lists-${task.id}`}>
         {lists.map((name) => (
           <option key={name} value={name} />
         ))}

@@ -51,6 +51,12 @@
     "count": "{count, plural, =0 {No tasks} one {# task} other {# tasks}}",
     "clearDone": "Clear done"
   },
+  "sort": {
+    "label": "Order",
+    "plan": "Smart",
+    "manual": "Manual",
+    "manualHint": "Manual order — drag a row to move it."
+  },
   "summary": {
     "dueToday": "{count, plural, =0 {Nothing due today} one {# task due today} other {# tasks due today}}",
     "thisWeek": "{count, plural, =0 {Nothing left this week} one {# task this week} other {# tasks this week}}",
@@ -99,8 +105,11 @@
     "dueYesterday": "Yesterday",
     "overdueBy": "{count, plural, one {# day overdue} other {# days overdue}}",
     "repeatDaily": "Daily",
+    "repeatWeekdays": "Every weekday",
     "repeatWeekly": "Weekly",
+    "repeatBiweekly": "Every 2 weeks",
     "repeatMonthly": "Monthly",
+    "repeatMonthlyLast": "Last day of month",
     "repeats": "Repeats {repeat}",
     "reschedule": "Reschedule “{title}”",
     "rescheduleToday": "Move “{title}” to today",
@@ -238,7 +247,21 @@
     "statusCount": "{count, plural, =0 {No invites} one {# invite} other {# invites}}",
     "busy": "Working…",
     "unavailable": "Sign in for sync first — sharing needs an account.",
-    "error": "That did not work. Check the code and try again."
+    "error": "That did not work. Check the code and try again.",
+    "copyLink": "Copy read-only link",
+    "linkCopied": "Link copied — it opens the list without an account.",
+    "linkTooBig": "This list is too big for a link. Share a smaller one, or invite instead."
+  },
+  "review": {
+    "title": "Review",
+    "blurb": "Your last seven days, from the tasks on this device.",
+    "done": "Finished",
+    "slipped": "Overdue",
+    "carried": "Rolled over",
+    "streak": "Day streak",
+    "days": "Finished per day",
+    "empty": "Nothing finished in the last seven days. Tick one off and it lands here.",
+    "dayLabel": "{date}: {count, plural, =0 {nothing finished} one {# finished} other {# finished}}"
   },
   "theme": {
     "title": "Theme",
@@ -258,6 +281,8 @@
     "dark": "Dark",
     "light": "Light",
     "glass": "Glass",
+    "auto": "Dark at night",
+    "autoHint": "Switches to the matching dark theme after 19:00, back at 07:00.",
     "saved": "Every preset restyles the whole app — nothing is hard-coded."
   },
   "footer": {

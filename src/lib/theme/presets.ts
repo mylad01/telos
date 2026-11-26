@@ -387,6 +387,36 @@ export const PRESETS: ThemePreset[] = [
 
 export const DEFAULT_PRESET_ID = 'paper';
 
+/** Light preset paired with each light one, for the dark-at-night switch. */
+const DARK_PARTNER: Record<string, string> = {
+  paper: 'ink',
+  sepia: 'ink',
+  nordic: 'noir',
+  mono: 'noir',
+  moss: 'noir',
+  blush: 'noir',
+  'ios-light': 'ios-dark',
+  'liquid-glass': 'liquid-glass-dark',
+};
+
+/** Dark preset paired with each dark one, so daytime in auto mode has a light theme. */
+const LIGHT_PARTNER: Record<string, string> = {
+  ink: 'paper',
+  aurora: 'paper',
+  noir: 'nordic',
+  'ios-dark': 'ios-light',
+  'liquid-glass-dark': 'liquid-glass',
+};
+
+/** The light and dark presets an auto switch flips between for the given preset. */
+export function contrastPair(id: string | null | undefined): { light: string; dark: string } {
+  const preset = presetById(id);
+  if (preset.tokens.scheme === 'dark') {
+    return { light: LIGHT_PARTNER[preset.id] ?? DEFAULT_PRESET_ID, dark: preset.id };
+  }
+  return { light: preset.id, dark: DARK_PARTNER[preset.id] ?? 'ink' };
+}
+
 export function presetById(id: string | null | undefined): ThemePreset {
   return PRESETS.find((preset) => preset.id === id) ?? PRESETS[0];
 }

@@ -1,4 +1,4 @@
-import { addDays, daysFromToday, parseISODate, toISODate } from './dates';
+import { addDays, daysFromToday, endOfMonth, parseISODate, toISODate } from './dates';
 import type { Repeat } from './tasks';
 
 export type QuickAdd = { title: string; due: string | null; repeat: Repeat | null };
@@ -56,6 +56,20 @@ function nextWeekday(word: string, today: string): string {
   const current = parseISODate(today).getDay();
   const diff = (weekdayIndex(word) - current + 7) % 7 || 7;
   return addDays(today, diff);
+}
+
+/** Today when it is Monday–Friday, otherwise the coming Monday. */
+function weekdayOrToday(today: string): string {
+  const day = parseISODate(today).getDay();
+  if (day === 0) return addDays(today, 1);
+  if (day === 6) return addDays(today, 2);
+  return today;
+}
+
+/** The last day of this month, or of next month when that one is already past. */
+function lastDayDue(today: string): string {
+  const end = endOfMonth(today);
+  return daysFromToday(end, today) > 0 ? end : endOfMonth(addDays(end, 1));
 }
 
 function monthDayDate(day: number, month: number, today: string): string | null {
@@ -116,6 +130,20 @@ export function parseQuickAdd(input: string, today: string): QuickAdd {
     setDue(nextWeekday(step.match[1], today));
   }
 
+  step = take(rest, /\bevery\s+weekdays?\b/i);
+  if (step.match) {
+    rest = step.text;
+    setRepeat('weekdays');
+    setDue(weekdayOrToday(today));
+  }
+
+  step = take(rest, /\bevery\s+(?:other|two|2)\s+weeks?\b/i);
+  if (step.match) {
+    rest = step.text;
+    setRepeat('biweekly');
+    setDue(today);
+  }
+
   step = take(rest, /\bevery\s+(day|week|month)\b/i);
   if (step.match) {
     rest = step.text;
@@ -124,11 +152,28 @@ export function parseQuickAdd(input: string, today: string): QuickAdd {
     setDue(today);
   }
 
-  step = take(rest, /\b(daily|weekly|monthly)\s*$/i);
+  step = take(rest, /\blast\s+day\s+of\s+(?:the\s+)?month\b/i);
+  if (step.match) {
+    rest = step.text;
+    setRepeat('monthly-last');
+    setDue(lastDayDue(today));
+  }
+
+  step = take(rest, /\b(daily|weekly|biweekly|fortnightly|weekdays|monthly)\s*$/i);
   if (step.match) {
     rest = step.text;
     const word = step.match[1].toLowerCase();
-    setRepeat(word === 'daily' ? 'daily' : word === 'weekly' ? 'weekly' : 'monthly');
+    setRepeat(
+      word === 'daily'
+        ? 'daily'
+        : word === 'weekly'
+          ? 'weekly'
+          : word === 'monthly'
+            ? 'monthly'
+            : word === 'weekdays'
+              ? 'weekdays'
+              : 'biweekly',
+    );
   }
 
   step = take(rest, /\bnext\s+week\b/i);

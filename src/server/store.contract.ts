@@ -24,6 +24,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     start: null,
     subtasks: [],
     evening: false,
+    order: null,
     ...overrides,
   };
 }

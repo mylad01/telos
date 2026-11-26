@@ -7,10 +7,12 @@ import { Composer } from './Composer';
 import { FocusTimer } from './FocusTimer';
 import { MonthView } from './MonthView';
 import { SharePanel } from './SharePanel';
+import { SharedView } from './SharedView';
 import { SyncPanel } from './SyncPanel';
 import { TaskRow, type TaskPatch } from './TaskRow';
 import { TemplatesMenu } from './TemplatesMenu';
 import { ThemeMenu } from './ThemeStudio';
+import { backupDue } from '@/lib/auto-backup';
 import { downloadBackup, parseBackup } from '@/lib/backup';
 import { applyBulk, parseBulk } from '@/lib/bulk';
 import { shiftMonth, tasksByDay } from '@/lib/calendar';
@@ -28,7 +30,10 @@ import {
   type FocusState,
 } from '@/lib/focus';
 import { habitStats } from '@/lib/habits';
+import { manualOrder, moveBefore, type SortMode } from '@/lib/order';
+import { decodeShare, encodeShare, readShareFromHash, shareHref, type ShareSnapshot } from '@/lib/public-link';
 import { dueReminders, markNotified, type NotifiedMap } from '@/lib/reminders';
+import { weeklyReview } from '@/lib/review';
 import { searchTasks } from '@/lib/search';
 import { createInvite, joinShare, listInvites, revokeInvite, type ShareInvite, type ShareRole } from '@/lib/share';
 import { donePerDay, streak as streakOf, weekRecap } from '@/lib/stats';
@@ -51,6 +56,8 @@ const LOCALE = 'en';
 const UNDO_MS = 8_000;
 const NOTIFIED_KEY = 'telos.reminders.v1';
 const REMINDER_TICK_MS = 30_000;
+const SORT_KEY = 'telos.sort.v1';
+const AUTO_BACKUP_KEY = 'telos.autobackup.v1';
 
 function newId(): string {
   return `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -71,7 +78,10 @@ export function TaskApp() {
     return { year: date.getFullYear(), month: date.getMonth() };
   });
   const [today, setToday] = useState<string>(todayISODate);
-  const [panel, setPanel] = useState<'none' | 'focus' | 'templates' | 'share'>('none');
+  const [panel, setPanel] = useState<'none' | 'focus' | 'templates' | 'share' | 'review'>('none');
+  const [sort, setSort] = useState<SortMode>('plan');
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [sharedSnapshot, setSharedSnapshot] = useState<ShareSnapshot | null>(null);
   const [focus, setFocus] = useState<FocusState>(stopFocus);
   const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
   const [bulkInput, setBulkInput] = useState('');
@@ -97,10 +107,28 @@ export function TaskApp() {
     if (result.status === 'blocked') setStorageBlocked(true);
   }, []);
 
+  // Weekly safety net: one JSON download every 7 days of use, never on the first visit.
+  useEffect(() => {
+    if (tasks === null || tasks.length === 0) return;
+    const last = window.localStorage.getItem(AUTO_BACKUP_KEY);
+    const now = new Date();
+    if (last === null) {
+      window.localStorage.setItem(AUTO_BACKUP_KEY, now.toISOString());
+      return;
+    }
+    if (!backupDue(last, now)) return;
+    downloadBackup(tasks);
+    window.localStorage.setItem(AUTO_BACKUP_KEY, now.toISOString());
+  }, [tasks]);
+
   useEffect(() => {
     setFocus(loadFocus());
     setTemplates(loadTemplates());
     if (supabaseConfig()) setShareSession(readSession());
+    const savedSort = window.localStorage.getItem(SORT_KEY);
+    if (savedSort === 'manual' || savedSort === 'plan') setSort(savedSort);
+    const code = readShareFromHash(window.location.hash);
+    if (code) setSharedSnapshot(decodeShare(code));
   }, []);
 
   useEffect(() => {
@@ -261,6 +289,34 @@ export function TaskApp() {
     [all, focus.taskId, focusTaskId, openTasks],
   );
   const shareList = listScope ?? lists[0] ?? 'Inbox';
+  const review = useMemo(() => weeklyReview(all, today), [all, today]);
+
+  function chooseSort(next: SortMode) {
+    setSort(next);
+    window.localStorage.setItem(SORT_KEY, next);
+  }
+
+  function dropBefore(movingId: string, targetId: string) {
+    setTasks((current) =>
+      current === null ? current : moveBefore(current, movingId, targetId, Date.now()),
+    );
+  }
+
+  async function copyShareLink() {
+    const source = (tasks ?? []).filter((task) => !task.deletedAt && task.list === shareList);
+    const code = encodeShare(source, shareList, Date.now());
+    if (code === null) {
+      setShareLink(t('share.linkTooBig'));
+      return;
+    }
+    const href = new URL(shareHref(window.location.pathname, code), window.location.origin).toString();
+    try {
+      await navigator.clipboard.writeText(href);
+      setShareLink(t('share.linkCopied'));
+    } catch {
+      setShareLink(href);
+    }
+  }
 
   async function refreshInvites() {
     const config = supabaseConfig();
@@ -270,7 +326,7 @@ export function TaskApp() {
     setInvites(await listInvites({ url: config.url, key: config.key }, session, shareList));
   }
 
-  function togglePanel(next: 'focus' | 'templates' | 'share') {
+  function togglePanel(next: 'focus' | 'templates' | 'share' | 'review') {
     const open = panel === next ? 'none' : next;
     setPanel(open);
     if (open === 'share') void refreshInvites();
@@ -394,6 +450,7 @@ export function TaskApp() {
       start: null,
       subtasks: [],
       evening: false,
+      order: null,
     };
     setTasks([task, ...tasks]);
     if (filter === 'done') setFilter('today');
@@ -444,6 +501,7 @@ export function TaskApp() {
         start: task.start,
         subtasks: task.subtasks,
         evening: task.evening,
+        order: null,
       };
       return [...marked, next];
     });
@@ -569,14 +627,25 @@ export function TaskApp() {
           ? counts.done
           : counts.total;
   const searching = query.trim().length > 0;
+  const orderedVisible = sort === 'manual' ? manualOrder(visible) : visible;
   const splitEvening =
-    filter === 'today' && !searching && !dayScope && visible.some((task) => task.evening);
+    filter === 'today' && !searching && !dayScope && orderedVisible.some((task) => task.evening);
   const groups = splitEvening
     ? [
-        { key: 'today', label: t('sections.today'), tasks: visible.filter((task) => !task.evening) },
-        { key: 'evening', label: t('sections.evening'), tasks: visible.filter((task) => task.evening) },
+        {
+          key: 'today',
+          label: t('sections.today'),
+          tasks: orderedVisible.filter((task) => !task.evening),
+        },
+        {
+          key: 'evening',
+          label: t('sections.evening'),
+          tasks: orderedVisible.filter((task) => task.evening),
+        },
       ].filter((group) => group.tasks.length > 0)
-    : [{ key: 'all', label: '', tasks: visible }];
+    : [{ key: 'all', label: '', tasks: orderedVisible }];
+
+  if (sharedSnapshot) return <SharedView snapshot={sharedSnapshot} />;
 
   return (
     <main className={`shell${pending ? ' has-toast' : ''}`} id="main">
@@ -741,6 +810,14 @@ export function TaskApp() {
         >
           {t('share.title', { list: shareList })}
         </button>
+        <button
+          type="button"
+          className="panel-tab"
+          aria-pressed={panel === 'review'}
+          onClick={() => togglePanel('review')}
+        >
+          {t('review.title')}
+        </button>
       </div>
 
       {panel === 'focus' && (
@@ -801,10 +878,66 @@ export function TaskApp() {
           ) : (
             <p className="panel-note">{t('share.unavailable')}</p>
           )}
+          <button type="button" className="panel-action" onClick={copyShareLink}>
+            {t('share.copyLink')}
+          </button>
+          {shareLink && (
+            <p className="panel-note share-link" role="status">
+              {shareLink}
+            </p>
+          )}
           {shareError && (
             <p className="panel-note" role="status">
               {shareError}
             </p>
+          )}
+        </div>
+      )}
+
+      {panel === 'review' && (
+        <div className="panel review-panel">
+          <p className="panel-note">{t('review.blurb')}</p>
+          <dl className="review-stats">
+            <div className="review-stat">
+              <dt>{t('review.done')}</dt>
+              <dd>{review.done}</dd>
+            </div>
+            <div className="review-stat">
+              <dt>{t('review.slipped')}</dt>
+              <dd>{review.slipped}</dd>
+            </div>
+            <div className="review-stat">
+              <dt>{t('review.carried')}</dt>
+              <dd>{review.carriedOver}</dd>
+            </div>
+            <div className="review-stat">
+              <dt>{t('review.streak')}</dt>
+              <dd>{review.streak}</dd>
+            </div>
+          </dl>
+          {review.done === 0 ? (
+            <p className="panel-note">{t('review.empty')}</p>
+          ) : (
+            <div className="review-days" role="list" aria-label={t('review.days')}>
+              {review.days.map((day) => {
+                const peak = Math.max(1, ...review.days.map((entry) => entry.done));
+                return (
+                  <div
+                    key={day.date}
+                    role="listitem"
+                    className="review-day"
+                    aria-label={t('review.dayLabel', { date: day.date, count: day.done })}
+                  >
+                    <span
+                      className="review-bar"
+                      data-empty={day.done === 0}
+                      style={{ height: `${Math.max(6, (day.done / peak) * 100)}%` }}
+                    />
+                    <span className="review-day-label">{day.date.slice(8)}</span>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -843,13 +976,34 @@ export function TaskApp() {
             t('list.sortedBy')
           )}
         </span>
-        {filter === 'done' && counts.done > 0 && !searching ? (
-          <button type="button" className="clear-done" onClick={clearDone}>
-            {t('list.clearDone')}
-          </button>
-        ) : visible.length > 0 ? (
-          <span>{t('list.count', { count: visible.length })}</span>
-        ) : null}
+        <span className="list-tools">
+          <span className="sort-toggle" role="group" aria-label={t('sort.label')}>
+            <button
+              type="button"
+              className="sort-option"
+              aria-pressed={sort === 'plan'}
+              onClick={() => chooseSort('plan')}
+            >
+              {t('sort.plan')}
+            </button>
+            <button
+              type="button"
+              className="sort-option"
+              aria-pressed={sort === 'manual'}
+              title={t('sort.manualHint')}
+              onClick={() => chooseSort('manual')}
+            >
+              {t('sort.manual')}
+            </button>
+          </span>
+          {filter === 'done' && counts.done > 0 && !searching ? (
+            <button type="button" className="clear-done" onClick={clearDone}>
+              {t('list.clearDone')}
+            </button>
+          ) : visible.length > 0 ? (
+            <span>{t('list.count', { count: visible.length })}</span>
+          ) : null}
+        </span>
       </div>
 
       {tasks === null ? (
@@ -898,6 +1052,7 @@ export function TaskApp() {
                     onReschedule={rescheduleTask}
                     onUpdate={updateTask}
                     onTagFilter={(tag) => setTagScope(tagScope === tag ? null : tag)}
+                    onDropBefore={sort === 'manual' ? dropBefore : undefined}
                   />
                 ))}
               </ul>

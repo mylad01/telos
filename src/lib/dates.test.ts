@@ -65,6 +65,60 @@ describe('nextOccurrence', () => {
     expect(nextOccurrence('2026-01-31', 'monthly', '2026-01-31')).toBe('2026-02-28');
     expect(nextOccurrence('2026-03-31', 'monthly', '2026-03-31')).toBe('2026-04-30');
   });
+
+  it('keeps a monthly task on the 31st when the target month has one', () => {
+    expect(nextOccurrence('2026-01-31', 'monthly', '2026-03-05')).toBe('2026-03-31');
+  });
+
+  it('handles a leap February', () => {
+    expect(nextOccurrence('2028-01-31', 'monthly', '2028-01-31')).toBe('2028-02-29');
+  });
+
+  it('moves a weekdays task to the next weekday', () => {
+    expect(nextOccurrence('2026-11-26', 'weekdays', '2026-11-26')).toBe('2026-11-27');
+  });
+
+  it('crosses the weekend from a Friday to the following Monday', () => {
+    expect(nextOccurrence('2026-11-27', 'weekdays', '2026-11-27')).toBe('2026-11-30');
+  });
+
+  it('never returns a Saturday or Sunday for weekdays', () => {
+    expect(nextOccurrence('2026-11-28', 'weekdays', '2026-11-28')).toBe('2026-11-30');
+    expect(nextOccurrence('2026-11-29', 'weekdays', '2026-11-29')).toBe('2026-11-30');
+    for (const today of ['2026-11-23', '2026-11-26', '2026-11-27', '2026-11-28']) {
+      const day = parseISODate(nextOccurrence('2026-11-02', 'weekdays', today)).getDay();
+      expect(day).toBeGreaterThan(0);
+      expect(day).toBeLessThan(6);
+    }
+  });
+
+  it('skips every missed weekday instead of landing in the past', () => {
+    expect(nextOccurrence('2026-11-06', 'weekdays', '2026-11-26')).toBe('2026-11-27');
+  });
+
+  it('moves a biweekly task two weeks past the reference', () => {
+    expect(nextOccurrence('2026-11-12', 'biweekly', '2026-11-25')).toBe('2026-11-26');
+    expect(nextOccurrence('2026-12-01', 'biweekly', '2026-11-25')).toBe('2026-12-15');
+  });
+
+  it('moves a monthly-last task to the last day of the following month', () => {
+    expect(nextOccurrence('2026-11-26', 'monthly-last', '2026-11-26')).toBe('2026-12-31');
+    expect(nextOccurrence('2026-01-15', 'monthly-last', '2026-01-20')).toBe('2026-02-28');
+  });
+
+  it('stops a monthly-last task on the last day of the month it lands in', () => {
+    expect(nextOccurrence('2026-09-30', 'monthly-last', '2026-11-26')).toBe('2026-11-30');
+  });
+
+  it('is always strictly after today', () => {
+    expect(nextOccurrence('2026-10-26', 'monthly', '2026-11-26')).toBe('2026-12-26');
+    expect(nextOccurrence('2026-11-26', 'daily', '2026-11-26')).toBe('2026-11-27');
+    expect(nextOccurrence('2026-11-30', 'monthly-last', '2026-11-30')).toBe('2026-12-31');
+  });
+
+  it('returns the due date unchanged for a one-off repeat', () => {
+    expect(nextOccurrence('2026-11-01', 'none', '2026-11-25')).toBe('2026-11-01');
+  });
 });
 
 describe('todayISODate', () => {

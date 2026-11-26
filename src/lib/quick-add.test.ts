@@ -38,6 +38,24 @@ describe('parseQuickAdd', () => {
     });
   });
 
+  it('reads weekdays, biweekly and month-end rules', () => {
+    expect(parseQuickAdd('standup every weekday', TODAY)).toEqual({
+      title: 'standup',
+      due: TODAY,
+      repeat: 'weekdays',
+    });
+    expect(parseQuickAdd('pay rent every other week', TODAY)).toEqual({
+      title: 'pay rent',
+      due: TODAY,
+      repeat: 'biweekly',
+    });
+    expect(parseQuickAdd('invoices last day of the month', TODAY)).toEqual({
+      title: 'invoices',
+      due: '2026-11-30',
+      repeat: 'monthly-last',
+    });
+  });
+
   it('reads a trailing repeat word', () => {
     expect(parseQuickAdd('water plants daily', TODAY)).toEqual({
       title: 'water plants',
@@ -46,6 +64,16 @@ describe('parseQuickAdd', () => {
     });
     expect(parseQuickAdd('rent weekly', TODAY).repeat).toBe('weekly');
     expect(parseQuickAdd('pay landlord monthly', TODAY).repeat).toBe('monthly');
+    expect(parseQuickAdd('review weekdays', TODAY)).toEqual({
+      title: 'review',
+      due: null,
+      repeat: 'weekdays',
+    });
+    expect(parseQuickAdd('sprint fortnightly', TODAY)).toEqual({
+      title: 'sprint',
+      due: null,
+      repeat: 'biweekly',
+    });
   });
 
   it('does not treat a repeat word in the middle as a rule', () => {

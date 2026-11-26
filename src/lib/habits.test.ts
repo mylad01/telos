@@ -26,6 +26,7 @@ function make(overrides: Partial<Task> = {}): Task {
     start: null,
     subtasks: [],
     evening: false,
+    order: null,
     ...overrides,
   };
 }
@@ -66,6 +67,31 @@ describe('habitStats', () => {
   it('follows the monthly day-of-month', () => {
     const tasks = series('rent', 'monthly', ['2026-09-15', '2026-10-15', '2026-11-15']);
     expect(habitStats(tasks, TODAY)[0].streak).toBe(3);
+  });
+
+  it('follows a weekdays cadence across a weekend', () => {
+    const tasks = series('standup', 'weekdays', [
+      '2026-11-23',
+      '2026-11-24',
+      '2026-11-25',
+      '2026-11-26',
+    ]);
+    expect(habitStats(tasks, TODAY)[0]).toMatchObject({ streak: 4, lastDone: '2026-11-26' });
+  });
+
+  it('follows a biweekly cadence', () => {
+    const tasks = series('timesheet', 'biweekly', ['2026-10-29', '2026-11-12', '2026-11-26']);
+    expect(habitStats(tasks, TODAY)[0]).toMatchObject({ streak: 3, lastDone: '2026-11-26' });
+  });
+
+  it('follows a monthly-last cadence', () => {
+    const tasks = series('report', 'monthly-last', ['2026-09-30', '2026-10-31']);
+    expect(habitStats(tasks, TODAY)[0]).toMatchObject({ streak: 2, lastDone: '2026-10-31' });
+  });
+
+  it('steps back to the 31st after a clamped February', () => {
+    const tasks = series('bill', 'monthly', ['2026-01-31', '2026-02-28']);
+    expect(habitStats(tasks, TODAY)[0].streak).toBe(2);
   });
 
   it('reports a series with a single completion', () => {

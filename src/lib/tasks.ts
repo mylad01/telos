@@ -1,4 +1,11 @@
-export type Repeat = 'none' | 'daily' | 'weekly' | 'monthly';
+export type Repeat =
+  | 'none'
+  | 'daily'
+  | 'weekdays'
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'monthly-last';
 
 /** 1 is the highest priority; 0 means none set. */
 export type Priority = 0 | 1 | 2 | 3;
@@ -41,11 +48,21 @@ export type Task = {
   subtasks: Subtask[];
   /** Sits in the "This evening" section of Today. */
   evening: boolean;
+  /** Manual position inside its list; null means "never dragged". */
+  order: number | null;
 };
 
 export type Filter = 'today' | 'week' | 'all' | 'done';
 
-const REPEATS: Repeat[] = ['none', 'daily', 'weekly', 'monthly'];
+const REPEATS: Repeat[] = [
+  'none',
+  'daily',
+  'weekdays',
+  'weekly',
+  'biweekly',
+  'monthly',
+  'monthly-last',
+];
 export const NOTES_MAX = 500;
 export const TOMBSTONE_MS = 30 * 86_400_000;
 
@@ -96,6 +113,8 @@ export function parseTask(value: unknown): Task | null {
       typeof task.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(task.start) ? task.start : null,
     subtasks: parseSubtasks(task.subtasks),
     evening: task.evening === true,
+    order:
+      typeof task.order === 'number' && Number.isFinite(task.order) ? task.order : null,
   };
 }
 

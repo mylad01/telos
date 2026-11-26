@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PRESET_ID, PRESETS, groupPresets, presetById } from './presets';
+import { DEFAULT_PRESET_ID, PRESETS, contrastPair, groupPresets, presetById } from './presets';
 import {
   TOKEN_KEYS,
   contrastRatio,
@@ -93,5 +93,20 @@ describe('tokens', () => {
     expect(parseColor('tomato')).toBeNull();
     expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 1);
     expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 2);
+  });
+
+  it('pairs every preset with one light and one dark partner for the auto switch', () => {
+    for (const preset of PRESETS) {
+      const pair = contrastPair(preset.id);
+      const light = PRESETS.find((entry) => entry.id === pair.light);
+      const dark = PRESETS.find((entry) => entry.id === pair.dark);
+      expect(light?.tokens.scheme, preset.id).toBe('light');
+      expect(dark?.tokens.scheme, preset.id).toBe('dark');
+    }
+    expect(contrastPair('liquid-glass')).toEqual({
+      light: 'liquid-glass',
+      dark: 'liquid-glass-dark',
+    });
+    expect(contrastPair('ios-dark')).toEqual({ light: 'ios-light', dark: 'ios-dark' });
   });
 });

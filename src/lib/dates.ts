@@ -1,3 +1,5 @@
+import type { Repeat } from './tasks';
+
 const DAY_MS = 86_400_000;
 
 export function toISODate(date: Date): string {
@@ -41,17 +43,53 @@ export function addMonths(value: string, months: number): string {
   return toISODate(date);
 }
 
+/** The last calendar day of the month `value` falls in. */
+export function endOfMonth(value: string): string {
+  const date = parseISODate(value);
+  return toISODate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+}
+
+/** The next Monday–Friday date after `value`; Saturday and Sunday are skipped. */
+function nextWeekdayAfter(value: string): string {
+  let next = addDays(value, 1);
+  const day = parseISODate(next).getDay();
+  if (day === 6) next = addDays(next, 2);
+  else if (day === 0) next = addDays(next, 1);
+  return next;
+}
+
 /**
  * The next date a recurring task falls on, always strictly after today, so a
- * task finished late never lands back in the overdue pile.
+ * task finished late never lands back in the overdue pile. Monthly kinds count
+ * whole months from `due`, so a task on the 31st stays on the 31st in months
+ * that have one instead of drifting earlier.
+ *
+ * `'none'` is a no-op that returns `due` unchanged: the caller never passes it,
+ * but returning the input keeps this function total instead of throwing.
  */
-export function nextOccurrence(
-  due: string,
-  repeat: 'daily' | 'weekly' | 'monthly',
-  today: string,
-): string {
-  const step = (value: string) =>
-    repeat === 'monthly' ? addMonths(value, 1) : addDays(value, repeat === 'daily' ? 1 : 7);
+export function nextOccurrence(due: string, repeat: Repeat, today: string): string {
+  if (repeat === 'none') return due;
+
+  let months = 0;
+  const step = (value: string): string => {
+    switch (repeat) {
+      case 'daily':
+        return addDays(value, 1);
+      case 'weekdays':
+        return nextWeekdayAfter(value);
+      case 'weekly':
+        return addDays(value, 7);
+      case 'biweekly':
+        return addDays(value, 14);
+      case 'monthly':
+        months += 1;
+        return addMonths(due, months);
+      case 'monthly-last':
+        months += 1;
+        return endOfMonth(addMonths(due, months));
+    }
+  };
+
   let next = step(due);
   for (let guard = 0; daysFromToday(next, today) <= 0 && guard < 730; guard += 1) {
     next = step(next);

@@ -11,7 +11,7 @@ const GROUPS: ThemePreset['group'][] = ['iphone', 'trend', 'classic'];
 /** iOS-style menu: one topbar button, presets in a floating popover. */
 export function ThemeMenu() {
   const t = useTranslations('theme');
-  const { presetId, sync, choose } = useThemePreset();
+  const { presetId, sync, choose, auto, setAuto } = useThemePreset();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -150,6 +150,22 @@ export function ThemeMenu() {
               })}
             </div>
           ))}
+
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={auto === 'auto'}
+            className="theme-item theme-item-auto"
+            onClick={() => setAuto(auto === 'auto' ? 'off' : 'auto')}
+          >
+            <span className="theme-item-text">
+              <span className="theme-item-name">{t('auto')}</span>
+              <span className="theme-item-note">{t('autoHint')}</span>
+            </span>
+            <span className="switch" data-on={auto === 'auto'} aria-hidden="true">
+              <span className="switch-knob" />
+            </span>
+          </button>
         </div>
       )}
     </div>

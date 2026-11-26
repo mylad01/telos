@@ -94,6 +94,7 @@ export function applyTemplate(template: Template, due: string, id: string, now: 
       done: false,
     })),
     evening: false,
+    order: null,
   };
 }
 

@@ -28,6 +28,7 @@ function make(overrides: Partial<Task> = {}): Task {
     start: null,
     subtasks: [],
     evening: false,
+    order: null,
     ...overrides,
   };
 }
@@ -176,5 +177,166 @@ describe('applyBulk', () => {
     expect(result.tasks).toHaveLength(2);
     expect(result.tasks[0]).toBe(open);
     expect(result.tasks[1]).toEqual({ ...done, deletedAt: 6000, updatedAt: 6000 });
+  });
+});
+
+const at = (date: string): number => new Date(`${date}T12:00:00`).getTime();
+
+describe('parseBulk shift, deleteBefore and completeOverdue', () => {
+  it('parses shift commands with a list, every list, or no list', () => {
+    expect(parseBulk('push work by 2 days', TODAY)).toEqual({
+      kind: 'shift',
+      list: 'work',
+      days: 2,
+      text: 'push work by 2 days',
+    });
+    expect(parseBulk('move everything by a week', TODAY)).toEqual({
+      kind: 'shift',
+      days: 7,
+      text: 'move everything by a week',
+    });
+    expect(parseBulk('shift gym 3 days', TODAY)).toEqual({
+      kind: 'shift',
+      list: 'gym',
+      days: 3,
+      text: 'shift gym 3 days',
+    });
+    expect(parseBulk('move all by a day', TODAY)).toEqual({
+      kind: 'shift',
+      days: 1,
+      text: 'move all by a day',
+    });
+  });
+
+  it('parses delete completed before a date', () => {
+    expect(parseBulk('delete completed before 2026-10-01', TODAY)).toEqual({
+      kind: 'deleteBefore',
+      before: '2026-10-01',
+      text: 'delete completed before 2026-10-01',
+    });
+    expect(parseBulk('delete completed before 1 nov', TODAY)).toEqual({
+      kind: 'deleteBefore',
+      before: '2026-11-01',
+      text: 'delete completed before 1 nov',
+    });
+  });
+
+  it('parses complete overdue without treating it as a list', () => {
+    expect(parseBulk('complete all overdue', TODAY)).toEqual({
+      kind: 'completeOverdue',
+      text: 'complete all overdue',
+    });
+    expect(parseBulk('complete overdue', TODAY)).toEqual({
+      kind: 'completeOverdue',
+      text: 'complete overdue',
+    });
+  });
+
+  it('returns null for phrases it does not recognise', () => {
+    expect(parseBulk('push work by many days', TODAY)).toBeNull();
+    expect(parseBulk('shift work sideways', TODAY)).toBeNull();
+    expect(parseBulk('delete completed someday', TODAY)).toBeNull();
+    expect(parseBulk('complete all today', TODAY)).toEqual({
+      kind: 'complete',
+      to: TODAY,
+      text: 'complete all today',
+    });
+  });
+});
+
+describe('applyBulk shift', () => {
+  it('shifts one list, moving due and start together', () => {
+    const work = make({ list: 'Work', due: TODAY, start: '2026-11-20' });
+    const home = make({ list: 'Home', due: TODAY, start: '2026-11-20' });
+    const result = applyBulk(
+      [work, home],
+      parseBulk('push work by 2 days', TODAY)!,
+      TODAY,
+      7000,
+    );
+    expect(result.changed).toBe(1);
+    expect(result.tasks[0]).toEqual({
+      ...work,
+      due: '2026-11-28',
+      start: '2026-11-22',
+      updatedAt: 7000,
+    });
+    expect(result.tasks[1]).toBe(home);
+    expect(result.summary).toBe('Shifted 1 task by 2 days');
+  });
+
+  it('shifts every list and keeps a null start null', () => {
+    const work = make({ list: 'Work', due: TODAY, start: null });
+    const home = make({ list: 'Home', due: '2026-11-30', start: '2026-11-29' });
+    const result = applyBulk(
+      [work, home],
+      parseBulk('move everything by a week', TODAY)!,
+      TODAY,
+      7100,
+    );
+    expect(result.changed).toBe(2);
+    expect(result.tasks[0]).toEqual({ ...work, due: NEXT_WEEK, start: null, updatedAt: 7100 });
+    expect(result.tasks[1]).toEqual({
+      ...home,
+      due: '2026-12-07',
+      start: '2026-12-06',
+      updatedAt: 7100,
+    });
+  });
+});
+
+describe('applyBulk deleteBefore', () => {
+  it('soft-deletes only done tasks completed before the cutoff', () => {
+    const old = make({ done: true, completedAt: at('2026-10-15') });
+    const recent = make({ done: true, completedAt: at('2026-11-20') });
+    const open = make({ done: false, completedAt: null });
+    const gone = make({ done: true, completedAt: at('2026-09-01'), deletedAt: 3 });
+    const result = applyBulk(
+      [old, recent, open, gone],
+      parseBulk('delete completed before 1 nov', TODAY)!,
+      TODAY,
+      8000,
+    );
+    expect(result.changed).toBe(1);
+    expect(result.tasks[0]).toEqual({ ...old, deletedAt: 8000, updatedAt: 8000 });
+    expect(result.tasks[1]).toBe(recent);
+    expect(result.tasks[2]).toBe(open);
+    expect(result.tasks[3]).toBe(gone);
+  });
+
+  it('soft-deletes nothing when the cutoff is ISO and nothing precedes it', () => {
+    const old = make({ done: true, completedAt: at('2026-10-15') });
+    const result = applyBulk(
+      [old],
+      parseBulk('delete completed before 2026-10-01', TODAY)!,
+      TODAY,
+      8100,
+    );
+    expect(result.changed).toBe(0);
+    expect(result.tasks).toEqual([old]);
+    expect(result.summary).toBe('Nothing to delete');
+  });
+});
+
+describe('applyBulk completeOverdue', () => {
+  it('completes open overdue tasks only', () => {
+    const late = make({ due: '2026-11-25' });
+    const today = make({ due: TODAY });
+    const future = make({ due: '2026-11-30' });
+    const doneLate = make({ due: '2026-11-20', done: true, completedAt: 1 });
+    const deletedLate = make({ due: '2026-11-20', deletedAt: 2 });
+    const result = applyBulk(
+      [late, today, future, doneLate, deletedLate],
+      parseBulk('complete all overdue', TODAY)!,
+      TODAY,
+      9000,
+    );
+    expect(result.changed).toBe(1);
+    expect(result.tasks[0]).toEqual({ ...late, done: true, completedAt: 9000, updatedAt: 9000 });
+    expect(result.tasks[1]).toBe(today);
+    expect(result.tasks[2]).toBe(future);
+    expect(result.tasks[3]).toBe(doneLate);
+    expect(result.tasks[4]).toBe(deletedLate);
+    expect(result.summary).toBe('Completed 1 overdue task');
   });
 });

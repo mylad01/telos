@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { loadPrefs, savePrefs } from '@/lib/prefs-client';
+import { loadPrefs, resetPrefsAccount, savePrefs } from '@/lib/prefs-client';
 import { readLocalPreset, writeLocalPreset } from '@/lib/prefs';
 import { DEFAULT_PRESET_ID, presetById } from '@/lib/theme/presets';
 import type { ThemePreset } from '@/lib/theme/tokens';
@@ -50,6 +50,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const onAccount = () => {
+      resetPrefsAccount();
+      void savePrefs(presetId).then(setSync);
+    };
+    window.addEventListener('telos:account', onAccount);
+    return () => window.removeEventListener('telos:account', onAccount);
+  }, [presetId]);
 
   useEffect(() => {
     const root = document.documentElement;

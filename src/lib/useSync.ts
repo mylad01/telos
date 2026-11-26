@@ -137,6 +137,7 @@ export function useSync(
       setAccount({ email: result.email });
       setPending(countPending(tasksRef.current));
       setStatus('syncing');
+      window.dispatchEvent(new Event('telos:account'));
       return null;
     },
     [countPending],
@@ -163,6 +164,7 @@ export function useSync(
     setLastSyncedAt(null);
     setPending(0);
     setStatus('local');
+    window.dispatchEvent(new Event('telos:account'));
   }, []);
 
   return {

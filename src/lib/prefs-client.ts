@@ -9,6 +9,11 @@ const TIMEOUT_MS = 10_000;
 /** null = not asked yet; false = nobody signed in, so keep prefs local only. */
 let httpAccount: boolean | null = null;
 
+/** Called when the account changes, so the next save asks again instead of skipping. */
+export function resetPrefsAccount(): void {
+  httpAccount = null;
+}
+
 function supabaseRow(config: SbConfig, session: ReturnType<typeof readSession>) {
   return {
     url: `${config.url}/rest/v1/telos_prefs`,

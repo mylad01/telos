@@ -669,7 +669,7 @@ export function TaskApp() {
   if (sharedSnapshot) return <SharedView snapshot={sharedSnapshot} />;
 
   return (
-    <main className={`shell${pending || rolled ? ' has-toast' : ''}`} id="main">
+    <main className="shell" id="main">
       <header className="topbar">
         <span className="wordmark">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -1090,6 +1090,58 @@ export function TaskApp() {
         </div>
       )}
 
+      {pending && (
+        <div
+          className="toast"
+          role="status"
+          onMouseEnter={() => setToastPaused(true)}
+          onMouseLeave={() => setToastPaused(false)}
+          onFocusCapture={() => setToastPaused(true)}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              setToastPaused(false);
+            }
+          }}
+        >
+          <span className="toast-text">
+            {pending.kind === 'delete'
+              ? t('toast.deleted', { title: pending.task.title })
+              : t('toast.cleared', { count: pending.tasks.length })}
+          </span>
+          <button type="button" className="toast-undo" onClick={undoPending}>
+            {t('toast.undo')}
+          </button>
+          <button
+            type="button"
+            className="toast-dismiss"
+            aria-label={t('toast.dismiss')}
+            onClick={() => setPending(null)}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {!pending && rolled && (
+        <div className="toast" role="status">
+          <span className="toast-text">
+            {t('toast.rolled', { title: rolled.title, due: shortDateFormat.format(parseISODate(rolled.due)) })}
+          </span>
+          <button
+            type="button"
+            className="toast-dismiss"
+            aria-label={t('toast.dismiss')}
+            onClick={() => setRolled(null)}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <footer className="footer">
         <div className="progress-line">
           <span>
@@ -1160,58 +1212,6 @@ export function TaskApp() {
         onImport={importTasks}
         backupMessage={backupMessage}
       />
-
-      {pending && (
-        <div
-          className="toast"
-          role="status"
-          onMouseEnter={() => setToastPaused(true)}
-          onMouseLeave={() => setToastPaused(false)}
-          onFocusCapture={() => setToastPaused(true)}
-          onBlurCapture={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-              setToastPaused(false);
-            }
-          }}
-        >
-          <span className="toast-text">
-            {pending.kind === 'delete'
-              ? t('toast.deleted', { title: pending.task.title })
-              : t('toast.cleared', { count: pending.tasks.length })}
-          </span>
-          <button type="button" className="toast-undo" onClick={undoPending}>
-            {t('toast.undo')}
-          </button>
-          <button
-            type="button"
-            className="toast-dismiss"
-            aria-label={t('toast.dismiss')}
-            onClick={() => setPending(null)}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {!pending && rolled && (
-        <div className="toast" role="status">
-          <span className="toast-text">
-            {t('toast.rolled', { title: rolled.title, due: shortDateFormat.format(parseISODate(rolled.due)) })}
-          </span>
-          <button
-            type="button"
-            className="toast-dismiss"
-            aria-label={t('toast.dismiss')}
-            onClick={() => setRolled(null)}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-      )}
     </main>
   );
 }

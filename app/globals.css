@@ -1066,15 +1066,12 @@ input {
 /* Undo toast --------------------------------------------------------- */
 
 .toast {
-  position: fixed;
-  inset-inline: var(--space-4);
-  inset-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
-  z-index: 20;
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   max-width: 27rem;
-  margin-inline: auto;
+  margin: var(--space-4) auto 0;
   padding: 8px 8px 8px var(--space-4);
   background: var(--text);
   border-radius: var(--radius-md);
@@ -1452,10 +1449,6 @@ input {
    [data-theme] override block lives here. */
 
 /* Phase B: lists, tags, priority, sub-tasks --------------------------- */
-
-.shell.has-toast {
-  padding-block-end: calc(var(--space-7) + 72px);
-}
 
 .composer-controls {
   flex-wrap: wrap;

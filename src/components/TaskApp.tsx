@@ -127,7 +127,8 @@ export function TaskApp() {
     if (supabaseConfig()) setShareSession(readSession());
     const savedSort = window.localStorage.getItem(SORT_KEY);
     if (savedSort === 'manual' || savedSort === 'plan') setSort(savedSort);
-    const code = readShareFromHash(window.location.hash);
+    const code =
+      readShareFromHash(window.location.hash) ?? readShareFromHash(window.location.search);
     if (code) setSharedSnapshot(decodeShare(code));
   }, []);
 

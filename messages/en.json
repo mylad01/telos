@@ -287,5 +287,13 @@
   },
   "footer": {
     "saved": "Saved in this browser"
+  },
+  "shared": {
+    "kicker": "Shared list · read-only",
+    "allLists": "All lists",
+    "meta": "{count, plural, one {# task} other {# tasks}} · {open} open · shared {date}",
+    "subtasks": "{done} of {count} subtasks done",
+    "foot": "This is a snapshot from a link. Nothing here changes the owner's list.",
+    "openApp": "Open the app"
   }
 }

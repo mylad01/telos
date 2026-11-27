@@ -716,6 +716,20 @@ input {
   color: var(--text-2);
 }
 
+.empty-starter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+.empty-starter .empty-hint {
+  max-width: 34ch;
+  font-size: var(--step-2);
+  color: var(--text-3);
+}
+
 .skeleton-row {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 44px;

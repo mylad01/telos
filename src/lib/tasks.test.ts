@@ -8,6 +8,7 @@ import {
   TOMBSTONE_MS,
   type Task,
 } from './tasks';
+import { buildStarterTasks } from './starter';
 
 function make(overrides: Partial<Task> = {}): Task {
   return {
@@ -124,5 +125,20 @@ describe('pendingChanges', () => {
         (task) => task.id,
       ),
     ).toEqual(['b']);
+  });
+});
+
+describe('buildStarterTasks', () => {
+  it('seeds three daily tasks that each own their series', () => {
+    const seeded = buildStarterTasks('2026-11-27', 1_000, (() => {
+      let n = 0;
+      return () => `id-${++n}`;
+    })(), 'Inbox');
+
+    expect(seeded).toHaveLength(3);
+    expect(seeded.every((task) => task.repeat === 'daily')).toBe(true);
+    expect(seeded.every((task) => task.due === '2026-11-27' && !task.done)).toBe(true);
+    expect(seeded.every((task) => task.seriesId === task.id)).toBe(true);
+    expect(new Set(seeded.map((task) => task.id)).size).toBe(3);
   });
 });

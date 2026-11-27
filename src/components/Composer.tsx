@@ -6,7 +6,15 @@ import { parseISODate } from '@/lib/dates';
 import { parseQuickAdd } from '@/lib/quick-add';
 import type { Repeat } from '@/lib/tasks';
 
-const REPEATS: Repeat[] = ['none', 'daily', 'weekly', 'monthly'];
+const REPEATS: Repeat[] = [
+  'none',
+  'daily',
+  'weekdays',
+  'weekly',
+  'biweekly',
+  'monthly',
+  'monthly-last',
+];
 const LOCALE = 'en';
 
 export function Composer({
@@ -39,14 +47,7 @@ export function Composer({
       }),
     [],
   );
-  const repeatLabel = (value: Repeat) =>
-    value === 'none'
-      ? t('repeat.none')
-      : value === 'daily'
-        ? t('repeat.daily')
-        : value === 'weekly'
-          ? t('repeat.weekly')
-          : t('repeat.monthly');
+  const repeatLabel = (value: Repeat) => t(`repeat.${value}`);
 
   const parsed = useMemo(() => parseQuickAdd(title, today), [title, today]);
   const hint =

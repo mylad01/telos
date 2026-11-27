@@ -36,12 +36,14 @@ import { dueReminders, markNotified, type NotifiedMap } from '@/lib/reminders';
 import { weeklyReview } from '@/lib/review';
 import { searchTasks } from '@/lib/search';
 import { createInvite, joinShare, listInvites, revokeInvite, type ShareInvite, type ShareRole } from '@/lib/share';
+import { buildStarterTasks } from '@/lib/starter';
 import { donePerDay, streak as streakOf, weekRecap } from '@/lib/stats';
 import { loadTasks, saveTasks } from '@/lib/storage';
 import { readSession } from '@/lib/supabase/client';
 import { applyTemplate, loadTemplates, saveTemplate, saveTemplates, type Template } from '@/lib/templates';
 import { supabaseConfig } from '@/lib/sync-backend';
 import {
+  DEFAULT_LIST,
   listsOf,
   markDescendantsDeleted,
   mergeTaskLists,
@@ -54,6 +56,7 @@ import { useSync } from '@/lib/useSync';
 const FILTERS: Filter[] = ['today', 'week', 'all', 'done'];
 const LOCALE = 'en';
 const UNDO_MS = 8_000;
+const ROLLED_MS = 4_500;
 const NOTIFIED_KEY = 'telos.reminders.v1';
 const REMINDER_TICK_MS = 30_000;
 const SORT_KEY = 'telos.sort.v1';
@@ -93,6 +96,7 @@ export function TaskApp() {
   const [shareSession, setShareSession] = useState<ReturnType<typeof readSession>>(null);
   const [storageBlocked, setStorageBlocked] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [rolled, setRolled] = useState<{ title: string; due: string } | null>(null);
   const [toastPaused, setToastPaused] = useState(false);
   const [query, setQuery] = useState('');
   const [backupMessage, setBackupMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(
@@ -185,6 +189,12 @@ export function TaskApp() {
     const timer = window.setInterval(tick, REMINDER_TICK_MS);
     return () => window.clearInterval(timer);
   }, [tasks, t]);
+
+  useEffect(() => {
+    if (!rolled) return;
+    const timer = window.setTimeout(() => setRolled(null), ROLLED_MS);
+    return () => window.clearTimeout(timer);
+  }, [rolled]);
 
   useEffect(() => {
     if (!pending || toastPaused) return;
@@ -384,6 +394,12 @@ export function TaskApp() {
     setTasks([...tasks, applyTemplate(template, today, newId(), Date.now())]);
   }
 
+  function addStarter() {
+    if (tasks === null) return;
+    const list = listScope ?? DEFAULT_LIST;
+    setTasks([...tasks, ...buildStarterTasks(today, Date.now(), newId, list)]);
+  }
+
   function removeTemplate(id: string) {
     const next = templates.filter((item) => item.id !== id);
     setTemplates(next);
@@ -460,6 +476,7 @@ export function TaskApp() {
   }
 
   function toggleTask(id: string) {
+    const target = tasks?.find((item) => item.id === id && item.deletedAt === null) ?? null;
     setTasks((current) => {
       if (current === null) return current;
       const task = current.find((item) => item.id === id && item.deletedAt === null);
@@ -506,6 +523,9 @@ export function TaskApp() {
       };
       return [...marked, next];
     });
+    if (target && !target.done && target.repeat !== 'none') {
+      setRolled({ title: target.title, due: nextOccurrence(target.due, target.repeat, today) });
+    }
   }
 
   function rescheduleTask(id: string, due: string) {
@@ -649,7 +669,7 @@ export function TaskApp() {
   if (sharedSnapshot) return <SharedView snapshot={sharedSnapshot} />;
 
   return (
-    <main className={`shell${pending ? ' has-toast' : ''}`} id="main">
+    <main className={`shell${pending || rolled ? ' has-toast' : ''}`} id="main">
       <header className="topbar">
         <span className="wordmark">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -1033,6 +1053,14 @@ export function TaskApp() {
             <>
               <h2>{t(`empty.${emptyKey}Title`)}</h2>
               <p>{t(`empty.${emptyKey}Body`)}</p>
+              {all.length === 0 && (
+                <div className="empty-starter">
+                  <button type="button" className="button-primary" onClick={addStarter}>
+                    {t('empty.starterCta')}
+                  </button>
+                  <p className="empty-hint">{t('empty.starterHint')}</p>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -1159,6 +1187,24 @@ export function TaskApp() {
             className="toast-dismiss"
             aria-label={t('toast.dismiss')}
             onClick={() => setPending(null)}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {!pending && rolled && (
+        <div className="toast" role="status">
+          <span className="toast-text">
+            {t('toast.rolled', { title: rolled.title, due: shortDateFormat.format(parseISODate(rolled.due)) })}
+          </span>
+          <button
+            type="button"
+            className="toast-dismiss"
+            aria-label={t('toast.dismiss')}
+            onClick={() => setRolled(null)}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />

@@ -22,7 +22,10 @@
       "none": "Once",
       "daily": "Daily",
       "weekly": "Weekly",
-      "monthly": "Monthly"
+      "monthly": "Monthly",
+      "weekdays": "Every weekday",
+      "biweekly": "Every 2 weeks",
+      "monthly-last": "Last day of month"
     }
   },
   "filters": {
@@ -126,7 +129,8 @@
     "deleted": "“{title}” deleted",
     "cleared": "{count, plural, one {# finished task cleared} other {# finished tasks cleared}}",
     "undo": "Undo",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "rolled": "“{title}” moved to {due}"
   },
   "sync": {
     "title": "Sync",
@@ -168,7 +172,9 @@
     "allTitle": "No tasks yet.",
     "allBody": "Add one above — it saves on this device.",
     "doneTitle": "Nothing finished yet.",
-    "doneBody": "Tick a task and it lands here."
+    "doneBody": "Tick one and it lands here.",
+    "starterCta": "Start with 3 daily habits",
+    "starterHint": "Water, steps, reading — repeating every day. Edit or delete any of them."
   },
   "storage": {
     "errorTitle": "Tasks can't be saved",
